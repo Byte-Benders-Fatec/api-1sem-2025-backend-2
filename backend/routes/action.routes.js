@@ -2,10 +2,10 @@ const express = require("express");
 const router = express.Router();
 const actionController = require("../controllers/action.controller");
 
-router.get("/", actionController.getAllActions);
-router.get("/:id", actionController.getActionById);
-router.post("/", actionController.createAction);
-router.put("/:id", actionController.updateAction);
-router.delete("/:id", actionController.deleteAction);
+router.get("/", actionController.getAll);
+router.get("/:id", actionController.getById);
+router.post("/", actionController.create);
+router.put("/:id", actionController.update);
+router.delete("/:id", actionController.remove);
 
 module.exports = router;

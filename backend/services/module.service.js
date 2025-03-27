@@ -25,7 +25,7 @@ const create = (name) => {
       if (err) return reject(err);
 
       if (results.length > 0) {
-        return reject(new Error("Já existe uma ação com esse nome."));
+        return reject(new Error("Já existe um módulo com esse nome."));
       }
 
       // Se não existir, cria o novo módulo
@@ -42,7 +42,7 @@ const update = (id, name) => {
     // Verifica se já existe um módulo com o mesmo nome (evita duplicação)
     db.query("SELECT id FROM module WHERE name = ? AND id != ?", [name, id], (err, results) => {
       if (err) return reject(err);
-      if (results.length > 0) return reject(new Error("Já existe uma ação com esse nome."));
+      if (results.length > 0) return reject(new Error("Já existe um módulo com esse nome."));
 
       // Realiza o update
       db.query("UPDATE module SET name = ? WHERE id = ?", [name, id], (err, result) => {

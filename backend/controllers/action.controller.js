@@ -1,6 +1,6 @@
 const actionService = require("../services/action.service");
 
-const getAllActions = async (req, res) => {
+const getAll = async (req, res) => {
   try {
     const actions = await actionService.findAll();
     res.json(actions);
@@ -9,7 +9,7 @@ const getAllActions = async (req, res) => {
   }
 };
 
-const getActionById = async (req, res) => {
+const getById = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const action = await actionService.findById(id);
@@ -20,7 +20,7 @@ const getActionById = async (req, res) => {
   }
 };
 
-const createAction = async (req, res) => {
+const create = async (req, res) => {
   try {
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: "O nome é obrigatório" });
@@ -32,7 +32,7 @@ const createAction = async (req, res) => {
   }
 };
 
-const updateAction = async (req, res) => {
+const update = async (req, res) => {
   const { id } = req.params;
   const { name } = req.body;
 
@@ -44,7 +44,7 @@ const updateAction = async (req, res) => {
   }
 };
 
-const deleteAction = async (req, res) => {
+const remove = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     await actionService.remove(id);
@@ -55,9 +55,9 @@ const deleteAction = async (req, res) => {
 };
 
 module.exports = {
-  getAllActions,
-  getActionById,
-  createAction,
-  updateAction,
-  deleteAction,
+  getAll,
+  getById,
+  create,
+  update,
+  remove,
 };

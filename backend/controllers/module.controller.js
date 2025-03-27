@@ -1,26 +1,26 @@
 const moduleService = require("../services/module.service");
 
-const getAllActions = async (req, res) => {
+const getAll = async (req, res) => {
   try {
-    const actions = await moduleService.findAll();
-    res.json(actions);
+    const modules = await moduleService.findAll();
+    res.json(modules);
   } catch (err) {
     res.status(500).json({ error: "Erro ao buscar módulo" });
   }
 };
 
-const getActionById = async (req, res) => {
+const getById = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const action = await moduleService.findById(id);
-    if (!action) return res.status(404).json({ message: "Módulo não encontrado" });
-    res.json(action);
+    const module = await moduleService.findById(id);
+    if (!module) return res.status(404).json({ message: "Módulo não encontrado" });
+    res.json(module);
   } catch (err) {
     res.status(500).json({ error: "Erro ao buscar módulo" });
   }
 };
 
-const createAction = async (req, res) => {
+const create = async (req, res) => {
   try {
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: "O nome é obrigatório" });
@@ -32,7 +32,7 @@ const createAction = async (req, res) => {
   }
 };
 
-const updateAction = async (req, res) => {
+const update = async (req, res) => {
   const { id } = req.params;
   const { name } = req.body;
 
@@ -44,7 +44,7 @@ const updateAction = async (req, res) => {
   }
 };
 
-const deleteAction = async (req, res) => {
+const remove = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     await moduleService.remove(id);
@@ -55,9 +55,9 @@ const deleteAction = async (req, res) => {
 };
 
 module.exports = {
-  getAllActions,
-  getActionById,
-  createAction,
-  updateAction,
-  deleteAction,
+  getAll,
+  getById,
+  create,
+  update,
+  remove,
 };
