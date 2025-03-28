@@ -1,4 +1,4 @@
-const db = require("../db");
+const db = require("../configs/db");
 const { v4: uuidv4 } = require("uuid");
 
 const allowedStatus = ['Não iniciada', 'Em andamento', 'Concluída', 'Cancelada'];

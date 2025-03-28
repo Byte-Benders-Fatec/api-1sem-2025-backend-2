@@ -1,4 +1,4 @@
-const db = require("../db");
+const db = require("../configs/db");
 
 const findAll = () => {
   return new Promise((resolve, reject) => {
