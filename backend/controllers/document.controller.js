@@ -27,6 +27,11 @@ const upload = async (req, res) => {
       return res.status(400).json({ error: "Nome, tipo e conteúdo são obrigatórios" });
     }
 
+    // Verifica o tamanho do arquivo: 16MB = 16 * 1024 * 1024 bytes
+    if (buffer.length > 16 * 1024 * 1024) {
+      return res.status(400).json({ error: "Arquivo muito grande. Limite de 16MB." });
+    }
+    
     const result = await documentService.create({
       name: originalname,
       mime_type: mimetype,
