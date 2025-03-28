@@ -30,7 +30,7 @@ const create = async (req, res) => {
     const result = await fundingAgencyService.create({ name, acronym, cnpj, website });
     res.status(201).json(result);
   } catch (err) {
-    res.status(500).json({ error: "Erro ao criar Agência de financiamento" });
+    res.status(500).json({ error: "Erro ao criar agência de financiamento" });
   }
 };
 
