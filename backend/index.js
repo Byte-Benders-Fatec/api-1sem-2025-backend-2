@@ -10,6 +10,7 @@ const permissionRoutes = require("./routes/permission.routes");
 const teamRoutes = require("./routes/team.routes");
 const userRoutes = require("./routes/user.routes");
 const areaRoutes = require("./routes/area.routes");
+const documentRoutes = require("./routes/document.routes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -25,5 +26,6 @@ app.use("/permissions", permissionRoutes);
 app.use("/teams", teamRoutes);
 app.use("/users", userRoutes);
 app.use("/areas", areaRoutes);
+app.use("/documents", documentRoutes);
 
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
