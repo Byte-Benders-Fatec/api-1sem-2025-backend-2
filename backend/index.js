@@ -14,6 +14,7 @@ const documentRoutes = require("./routes/document.routes");
 const fundingAgencyRoutes = require("./routes/fundingagency.routes");
 const activityRoutes = require("./routes/activity.routes");
 const taskRoutes = require("./routes/task.routes");
+const projectRoutes = require("./routes/project.routes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -33,5 +34,6 @@ app.use("/documents", documentRoutes);
 app.use("/agencies", fundingAgencyRoutes);
 app.use("/activities", activityRoutes);
 app.use("/tasks", taskRoutes);
+app.use("/projects", projectRoutes);
 
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));

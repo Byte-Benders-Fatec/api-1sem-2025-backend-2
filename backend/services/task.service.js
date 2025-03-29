@@ -31,7 +31,7 @@ const create = async ({ activity_id, user_id, title, description, time_spent_min
 
     // Verifica se a atividade existe
     const [activityExists] = await queryAsync("SELECT id FROM activity WHERE id = ?", [activity_id]);
-    if ([activityExists].length === 0) {
+    if (activityExists.length === 0) {
       throw new Error(`Atividade não encontrada, id: ${activity_id}`);
     }
 
@@ -117,7 +117,7 @@ const update = async (id, { activity_id, user_id, title, description, time_spent
     // Se o activity_id foi informado, verifica se a atividade existe
     if (activity_id !== undefined) {
       const [activityExists] = await queryAsync("SELECT id FROM activity WHERE id = ?", [activity_id]);
-      if ([activityExists].length === 0) {
+      if (activityExists.length === 0) {
         throw new Error(`Atividade não encontrada, id: ${activity_id}`);
       }
     }
