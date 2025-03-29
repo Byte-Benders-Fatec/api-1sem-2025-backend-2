@@ -228,7 +228,7 @@ const update = async (id, { project_id, name, description, status, allocated_bud
 
     const result = await queryAsync(sql, values);
 
-    return { id, updated: result.affectedRows > 0 };
+    return { id, updated: result[0].affectedRows > 0 };
   } catch (error) {
     throw error;
   }

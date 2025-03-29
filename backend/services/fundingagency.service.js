@@ -128,7 +128,8 @@ const update = async (id, { name, acronym, cnpj, website, is_active }) => {
     values.push(id);
 
     const result = await queryAsync(sql, values);
-    return result;
+    
+    return { id, updated: result[0].affectedRows > 0 };
   } catch (error) {
     throw error;
   }

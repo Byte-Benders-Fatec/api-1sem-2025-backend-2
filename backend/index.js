@@ -13,6 +13,7 @@ const areaRoutes = require("./routes/area.routes");
 const documentRoutes = require("./routes/document.routes");
 const fundingAgencyRoutes = require("./routes/fundingagency.routes");
 const activityRoutes = require("./routes/activity.routes");
+const taskRoutes = require("./routes/task.routes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -31,5 +32,6 @@ app.use("/areas", areaRoutes);
 app.use("/documents", documentRoutes);
 app.use("/agencies", fundingAgencyRoutes);
 app.use("/activities", activityRoutes);
+app.use("/tasks", taskRoutes);
 
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
