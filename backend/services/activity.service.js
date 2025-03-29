@@ -1,4 +1,4 @@
-const db = require("../configs/db");
+const { db, queryAsync } = require("../configs/db");
 const { v4: uuidv4 } = require("uuid");
 
 const allowedStatus = ['Não iniciada', 'Em andamento', 'Concluída', 'Cancelada'];
@@ -111,16 +111,6 @@ const create = async ({ project_id, name, description, status, allocated_budget,
     throw error;
   }
 };
-
-// Wrapper para transformar db.query em uma Promise
-function queryAsync(sql, params) {
-  return new Promise((resolve, reject) => {
-    db.query(sql, params, (err, results) => {
-      if (err) return reject(err);
-      resolve([results]);
-    });
-  });
-}
 
 const update = async (id, { project_id, name, description, status, allocated_budget, start_date, end_date, created_by, is_active }) => {
   try {

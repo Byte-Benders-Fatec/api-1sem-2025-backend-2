@@ -1,4 +1,4 @@
-const db = require("../configs/db");
+const { db, queryAsync } = require("../configs/db");
 
 const findAll = () => {
   return new Promise((resolve, reject) => {
