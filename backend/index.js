@@ -19,7 +19,7 @@ const projectRoutes = require("./routes/project.routes");
 const authRoutes = require('./routes/auth.routes');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.API_PORT || 5000;
 
 app.use(cors());
 app.use(express.json());

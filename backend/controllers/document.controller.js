@@ -40,7 +40,7 @@ const upload = async (req, res) => {
 
     res.status(201).json(result);
   } catch (err) {
-    res.status(500).json({ error: "Erro ao salvar documento" });
+    res.status(500).json({ error: "Erro ao salvar documento", details: err.message });
   }
 };
 
