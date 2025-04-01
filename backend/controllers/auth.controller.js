@@ -29,13 +29,17 @@ const AuthController = {
          // Gera código aleatório de 6 dígitos
         const { code } = await createTwoFaCode(user.id);
 
+        const disable2FA = process.env.SKIP_2FA === 'true';
+
         // Envia e-mail (usando nodemailer ou outro)
-        await sendEmail({
-          to: user.email,
-          subject: 'Seu código de acesso',
-          text: `Seu código de verificação é: ${code}`
-        });
-        
+        if (!disable2FA) {
+          await sendEmail({
+            to: user.email,
+            subject: 'Seu código de acesso',
+            text: `Seu código de verificação é: ${code}`
+          });
+        }
+
         // Gera token temporário de verificação (login_token)
         const loginToken = jwt.sign(
           { email: user.email, scope: 'verify' },
@@ -43,7 +47,12 @@ const AuthController = {
           { expiresIn: '10m' }
         );
 
-        return res.json({ message: 'Código enviado por e-mail', login_token: loginToken });
+        if(!disable2FA) {
+          return res.json({ message: 'Código enviado por e-mail', login_token: loginToken });
+        }
+        else {
+          return res.json({ message: 'Código enviado por e-mail', code: code, login_token: loginToken });
+        }
     } catch (err) {
         console.error(err);
         return res.status(500).json({ message: 'Erro interno', details: err.message });
@@ -106,7 +115,7 @@ const AuthController = {
       const system_role = system_roles[0];
 
       if (!system_role) return res.status(401).json({ message: 'O usuário não possui papel de sistema atribuido' });
-      
+
       const token = jwt.sign(
         { id: user.id, system_role: system_role.name, name: user.name, email: user.email},
         process.env.JWT_SECRET,
