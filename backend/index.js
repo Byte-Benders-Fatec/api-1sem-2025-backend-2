@@ -17,6 +17,7 @@ const activityRoutes = require("./routes/activity.routes");
 const taskRoutes = require("./routes/task.routes");
 const projectRoutes = require("./routes/project.routes");
 const authRoutes = require('./routes/auth.routes');
+const institutionRoutes = require('./routes/institution.routes');
 
 const app = express();
 const PORT = process.env.API_PORT || 5000;
@@ -38,6 +39,7 @@ app.use("/activities", activityRoutes);
 app.use("/tasks", taskRoutes);
 app.use("/projects", projectRoutes);
 app.use('/auth', authRoutes);
+app.use('/institutions', institutionRoutes);
 
 // Inicializa o Super Admin antes do servidor rodar
 initSuperAdmin()
