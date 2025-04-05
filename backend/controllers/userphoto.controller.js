@@ -15,7 +15,7 @@ const getById = async (req, res) => {
   try {
     const id = req.params.id; // UUID é string
     const photo = await userPhotoService.findById(id);
-    if (!photo) return res.status(404).json({ message: "Foto de perfil não encontrada" });
+    if (!photo) return res.status(204).send();
     res.json(photo);
   } catch (err) {
     res.status(500).json({ error: "Erro ao buscar foto de perfil" });
@@ -59,7 +59,7 @@ const download = async (req, res) => {
     const id = req.params.id; // UUID é string
     const photo = await userPhotoService.getContent(id);
 
-    if (!photo) return res.status(404).json({ error: "Foto de perfil não encontrada" });
+    if (!photo) return res.status(204).send();
 
     res.setHeader("Content-Disposition", `attachment; filename="${photo.name}"`);
     res.setHeader("Content-Type", photo.mime_type);
@@ -75,7 +75,7 @@ const view = async (req, res) => {
     const id = req.params.id; // UUID é string
     const photo = await userPhotoService.getContent(id);
 
-    if (!photo) return res.status(404).json({ error: "Foto de perfil não encontrada" });
+    if (!photo) return res.status(204).send();
 
     res.setHeader("Content-Disposition", `inline; filename="${photo.name}"`);
     res.setHeader("Content-Type", photo.mime_type);
