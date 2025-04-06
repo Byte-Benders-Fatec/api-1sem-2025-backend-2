@@ -128,6 +128,10 @@ const AuthController = {
     }
   },
   
+  validate: async (req, res) => {
+    res.status(200).json({ valid: true, user: req.user });
+  },
+
   me: async (req, res) => {
     return res.json(req.user);
   }

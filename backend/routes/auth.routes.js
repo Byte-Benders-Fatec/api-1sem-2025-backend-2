@@ -11,6 +11,7 @@ const verifyCodeLimiter = createRateLimiter(
 
 router.post('/login', AuthController.login);
 router.post('/verify-code', verifyCodeLimiter, verifyTokenScope('verify'), AuthController.checkCode);
+router.get('/validate', authMiddleware, AuthController.validate);
 router.get('/me', authMiddleware, AuthController.me);
 
 module.exports = router;

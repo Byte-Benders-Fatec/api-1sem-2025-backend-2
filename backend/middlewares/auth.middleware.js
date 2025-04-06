@@ -17,7 +17,7 @@ function authMiddleware(req, res, next) {
     req.user = decoded;
     next();
   } catch (err) {
-    return res.status(401).json({ message: 'Token inválido ou expirado' });
+    return res.status(401).json({ valid: false, message: 'Token inválido ou expirado' });
   }
 }
 
