@@ -10,6 +10,15 @@ const findAll = () => {
   });
 };
 
+const findByFilters = (where, values) => {
+  return new Promise((resolve, reject) => {
+    db.query(`SELECT * FROM user ${where}`, values, (err, results) => {
+      if (err) return reject(err);
+      resolve(results);
+    });
+  });
+};
+
 const findById = (id) => {
   return new Promise((resolve, reject) => {
     db.query("SELECT * FROM user WHERE id = ?", [id], (err, results) => {
@@ -109,6 +118,7 @@ const remove = (id) => {
 
 module.exports = {
   findAll,
+  findByFilters,
   findById,
   create,
   update,

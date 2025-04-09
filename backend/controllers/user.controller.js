@@ -1,5 +1,6 @@
 const userService = require("../services/user.service");
 const bcrypt = require("bcrypt");
+const { generateSqlFilters } = require("../utils/generateSqlFilters");
 
 const getAll = async (req, res) => {
   try {
@@ -7,6 +8,18 @@ const getAll = async (req, res) => {
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: "Erro ao buscar usuário" });
+  }
+};
+
+const getByFilter = async (req, res) => {
+  try {
+    const filters = req.query;
+    const { where, values } = generateSqlFilters(filters);
+
+    const projects = await userService.findByFilters(where, values);
+    res.json(projects);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar projetos" })
   }
 };
 
@@ -70,6 +83,7 @@ const remove = async (req, res) => {
 
 module.exports = {
   getAll,
+  getByFilter,
   getById,
   create,
   update,

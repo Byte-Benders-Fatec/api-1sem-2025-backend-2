@@ -1,4 +1,5 @@
 const fundingAgencyService = require("../services/fundingagency.service");
+const { generateSqlFilters } = require("../utils/generateSqlFilters");
 
 const getAll = async (req, res) => {
   try {
@@ -6,6 +7,18 @@ const getAll = async (req, res) => {
     res.json(fundingagencies);
   } catch (err) {
     res.status(500).json({ error: "Erro ao buscar agência de financiamento" });
+  }
+};
+
+const getByFilter = async (req, res) => {
+  try {
+    const filters = req.query;
+    const { where, values } = generateSqlFilters(filters);
+
+    const projects = await fundingAgencyService.findByFilters(where, values);
+    res.json(projects);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar projetos" })
   }
 };
 
@@ -58,6 +71,7 @@ const remove = async (req, res) => {
 
 module.exports = {
   getAll,
+  getByFilter,
   getById,
   create,
   update,

@@ -3,6 +3,7 @@ const router = express.Router();
 const fundingAgencyController = require("../controllers/fundingagency.controller");
 
 router.get("/", fundingAgencyController.getAll);
+router.get("/filters", fundingAgencyController.getByFilter);
 router.get("/:id", fundingAgencyController.getById);
 router.post("/", fundingAgencyController.create);
 router.put("/:id", fundingAgencyController.update);

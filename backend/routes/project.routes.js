@@ -3,6 +3,7 @@ const router = express.Router();
 const projectController = require("../controllers/project.controller");
 
 router.get("/", projectController.getAll);
+router.get("/filters", projectController.getByFilter);
 router.get("/:id", projectController.getById);
 router.post("/", projectController.create);
 router.put("/:id", projectController.update);

@@ -22,6 +22,15 @@ const findById = (id) => {
   });
 };
 
+const findByFilters = (where, values) => {
+  return new Promise((resolve, reject) => {
+    db.query(`SELECT * FROM project ${where}`, values, (err, results) => {
+      if (err) return reject(err);
+      resolve(results);
+    });
+  });
+};
+
 const create = async ({ name, code, description, status, start_date, end_date, budget, funding_agency_id, created_by_id }) => {
   try {
 
@@ -287,6 +296,7 @@ const remove = (id) => {
 module.exports = {
   findAll,
   findById,
+  findByFilters,
   create,
   update,
   remove,
