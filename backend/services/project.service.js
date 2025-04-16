@@ -293,6 +293,21 @@ const remove = (id) => {
   });
 };
 
+const findAreasByProjectId = (projectId) => {
+  const sql = `
+    SELECT a.*
+    FROM area a
+    INNER JOIN project_area pa ON pa.area_id = a.id
+    WHERE pa.project_id = ?
+  `;
+  return new Promise((resolve, reject) => {
+    db.query(sql, [projectId], (err, results) => {
+      if (err) return reject(err);
+      resolve(results);
+    });
+  });
+};
+
 module.exports = {
   findAll,
   findById,
@@ -300,4 +315,5 @@ module.exports = {
   create,
   update,
   remove,
+  findAreasByProjectId,
 };

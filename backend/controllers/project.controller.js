@@ -71,6 +71,16 @@ const remove = async (req, res) => {
   }
 };
 
+const getAreasByProjectId = async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const areas = await projectService.findAreasByProjectId(projectId);
+    res.json(areas);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar áreas do projeto" });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -78,4 +88,5 @@ module.exports = {
   create,
   update,
   remove,
+  getAreasByProjectId,
 };
