@@ -693,6 +693,32 @@ const removeTeamFromProject = async (projectId, teamId) => {
   }
 };
 
+const findAvailableTeamsForProject = async (projectId) => {
+  try {
+    // Verifica se o projeto existe
+    const [project] = await queryAsync("SELECT id FROM project WHERE id = ?", [projectId]);
+    if (project.length === 0) {
+      throw new Error("Projeto não encontrado.");
+    }
+
+    // Retorna times não vinculados
+    const sql = `
+      SELECT t.*
+      FROM team t
+      WHERE t.id NOT IN (
+        SELECT team_id
+        FROM project_team
+        WHERE project_id = ?
+      )
+    `;
+
+    const [result] = await queryAsync(sql, [projectId]);
+    return result;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   findAll,
   findById,
@@ -715,4 +741,5 @@ module.exports = {
   findTeamsByProjectId,
   addTeamToProject,
   removeTeamFromProject,
+  findAvailableTeamsForProject,
 };

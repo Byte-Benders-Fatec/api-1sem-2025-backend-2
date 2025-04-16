@@ -22,6 +22,7 @@ router.delete("/:projectId/institutions/:institutionId", projectController.unlin
 
 // Times vinculados a projeto (N:N)
 router.get("/:id/teams", projectController.getTeamsByProjectId);
+router.get("/:id/available-teams", projectController.getAvailableTeamsForProject);
 router.post("/:id/teams", projectController.linkTeamToProject);
 router.delete("/:projectId/teams/:teamId", projectController.unlinkTeamFromProject);
 
