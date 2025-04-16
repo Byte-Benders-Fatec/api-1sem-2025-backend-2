@@ -175,6 +175,22 @@ const getInstitutionsByProjectId = async (req, res) => {
   }
 };
 
+const linkInstitutionToProject = async (req, res) => {
+  try {
+    const { id: projectId } = req.params;
+    const { institution_id } = req.body;
+
+    if (!institution_id) {
+      return res.status(400).json({ error: "O campo 'institution_id' é obrigatório." });
+    }
+
+    const result = await projectService.addInstitutionToProject(projectId, institution_id);
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao vincular instituição ao projeto", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -191,4 +207,5 @@ module.exports = {
   unlinkFundingAgencyFromProject,
   getAvailableFundingAgenciesForProject,
   getInstitutionsByProjectId,
+  linkInstitutionToProject,
 };

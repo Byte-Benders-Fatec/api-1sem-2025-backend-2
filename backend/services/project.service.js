@@ -524,6 +524,50 @@ const findInstitutionsByProjectId = (projectId) => {
   });
 };
 
+const addInstitutionToProject = async (projectId, institutionId) => {
+  try {
+    // Verifica se o projeto existe
+    const [project] = await queryAsync("SELECT id FROM project WHERE id = ?", [projectId]);
+    if (project.length === 0) {
+      throw new Error("Projeto não encontrado.");
+    }
+
+    // Verifica se a instituição existe
+    const [institution] = await queryAsync("SELECT id FROM institution WHERE id = ?", [institutionId]);
+    if (institution.length === 0) {
+      throw new Error("Instituição não encontrada.");
+    }
+
+    // Verifica se o vínculo já existe
+    const [exists] = await queryAsync(
+      "SELECT * FROM project_institution WHERE project_id = ? AND institution_id = ?",
+      [projectId, institutionId]
+    );
+    if (exists.length > 0) {
+      throw new Error("Esta instituição já está vinculada ao projeto.");
+    }
+
+    // Verifica se já há 3 instituições vinculadas
+    const [countResult] = await queryAsync(
+      "SELECT COUNT(*) AS count FROM project_institution WHERE project_id = ?",
+      [projectId]
+    );
+    if (countResult[0].count >= 3) {
+      throw new Error("O projeto já possui o número máximo de 3 instituições vinculadas.");
+    }
+
+    // Insere vínculo
+    await queryAsync(
+      "INSERT INTO project_institution (project_id, institution_id) VALUES (?, ?)",
+      [projectId, institutionId]
+    );
+
+    return { message: "Instituição vinculada com sucesso ao projeto." };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   findAll,
   findById,
@@ -540,4 +584,5 @@ module.exports = {
   removeFundingAgencyFromProject,
   findAvailableFundingAgenciesForProject,
   findInstitutionsByProjectId,
+  addInstitutionToProject,
 };
