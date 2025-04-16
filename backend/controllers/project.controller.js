@@ -108,6 +108,16 @@ const unlinkAreaFromProject = async (req, res) => {
   }
 };
 
+const getAvailableAreasForProject = async (req, res) => {
+  try {
+    const { id: projectId } = req.params;
+    const areas = await projectService.findAvailableAreasForProject(projectId);
+    res.json(areas);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao buscar áreas disponíveis", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -118,4 +128,5 @@ module.exports = {
   getAreasByProjectId,
   linkAreaToProject,
   unlinkAreaFromProject,
+  getAvailableAreasForProject,
 };

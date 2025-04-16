@@ -373,6 +373,32 @@ const removeAreaFromProject = async (projectId, areaId) => {
   }
 };
 
+const findAvailableAreasForProject = async (projectId) => {
+  try {
+    // Verifica se o projeto existe
+    const [project] = await queryAsync("SELECT id FROM project WHERE id = ?", [projectId]);
+    if (project.length === 0) {
+      throw new Error("Projeto não encontrado.");
+    }
+
+    // Retorna áreas que ainda não estão vinculadas ao projeto
+    const sql = `
+      SELECT a.*
+      FROM area a
+      WHERE a.id NOT IN (
+        SELECT area_id
+        FROM project_area
+        WHERE project_id = ?
+      )
+    `;
+
+    const [result] = await queryAsync(sql, [projectId]);
+    return result;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   findAll,
   findById,
@@ -383,4 +409,5 @@ module.exports = {
   findAreasByProjectId,
   addAreaToProject,
   removeAreaFromProject,
+  findAvailableAreasForProject,
 };

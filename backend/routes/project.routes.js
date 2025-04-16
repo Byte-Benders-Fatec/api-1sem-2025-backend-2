@@ -4,6 +4,7 @@ const projectController = require("../controllers/project.controller");
 
 // Áreas vinculadas a projeto (N:N)
 router.get("/:id/areas", projectController.getAreasByProjectId);
+router.get("/:id/available-areas", projectController.getAvailableAreasForProject);
 router.post("/:id/areas", projectController.linkAreaToProject);
 router.delete("/:projectId/areas/:areaId", projectController.unlinkAreaFromProject);
 
