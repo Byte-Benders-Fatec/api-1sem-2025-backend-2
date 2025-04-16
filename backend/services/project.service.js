@@ -618,6 +618,22 @@ const findAvailableInstitutionsForProject = async (projectId) => {
   }
 };
 
+const findTeamsByProjectId = (projectId) => {
+  const sql = `
+    SELECT t.*
+    FROM team t
+    INNER JOIN project_team pt ON pt.team_id = t.id
+    WHERE pt.project_id = ?
+  `;
+
+  return new Promise((resolve, reject) => {
+    db.query(sql, [projectId], (err, results) => {
+      if (err) return reject(err);
+      resolve(results);
+    });
+  });
+};
+
 module.exports = {
   findAll,
   findById,
@@ -637,4 +653,5 @@ module.exports = {
   addInstitutionToProject,
   removeInstitutionFromProject,
   findAvailableInstitutionsForProject,
+  findTeamsByProjectId,
 };

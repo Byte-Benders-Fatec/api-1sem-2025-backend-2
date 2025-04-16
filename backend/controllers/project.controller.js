@@ -212,6 +212,16 @@ const getAvailableInstitutionsForProject = async (req, res) => {
   }
 };
 
+const getTeamsByProjectId = async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const teams = await projectService.findTeamsByProjectId(projectId);
+    res.json(teams);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar times do projeto", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -231,4 +241,5 @@ module.exports = {
   linkInstitutionToProject,
   unlinkInstitutionFromProject,
   getAvailableInstitutionsForProject,
+  getTeamsByProjectId,
 };

@@ -20,6 +20,9 @@ router.get("/:id/available-institutions", projectController.getAvailableInstitut
 router.post("/:id/institutions", projectController.linkInstitutionToProject);
 router.delete("/:projectId/institutions/:institutionId", projectController.unlinkInstitutionFromProject);
 
+// Times vinculados a projeto (N:N)
+router.get("/:id/teams", projectController.getTeamsByProjectId);
+
 // Projetos - CRUD principal
 router.get("/", projectController.getAll);
 router.get("/filters", projectController.getByFilter);
