@@ -414,6 +414,50 @@ const findFundingAgenciesByProjectId = (projectId) => {
   });
 };
 
+const addFundingAgencyToProject = async (projectId, agencyId) => {
+  try {
+    // Verifica se o projeto existe
+    const [project] = await queryAsync("SELECT id FROM project WHERE id = ?", [projectId]);
+    if (project.length === 0) {
+      throw new Error("Projeto não encontrado.");
+    }
+
+    // Verifica se a agência existe
+    const [agency] = await queryAsync("SELECT id FROM funding_agency WHERE id = ?", [agencyId]);
+    if (agency.length === 0) {
+      throw new Error("Agência de fomento não encontrada.");
+    }
+
+    // Verifica se vínculo já existe
+    const [exists] = await queryAsync(
+      "SELECT * FROM project_funding_agency WHERE project_id = ? AND funding_agency_id = ?",
+      [projectId, agencyId]
+    );
+    if (exists.length > 0) {
+      throw new Error("Esta agência já está vinculada ao projeto.");
+    }
+
+    // Verifica se o projeto já tem 3 agências vinculadas
+    const [countResult] = await queryAsync(
+      "SELECT COUNT(*) AS count FROM project_funding_agency WHERE project_id = ?",
+      [projectId]
+    );
+    if (countResult[0].count >= 3) {
+      throw new Error("O projeto já possui o número máximo de 3 agências de fomento vinculadas.");
+    }
+
+    // Insere vínculo
+    await queryAsync(
+      "INSERT INTO project_funding_agency (project_id, funding_agency_id) VALUES (?, ?)",
+      [projectId, agencyId]
+    );
+
+    return { message: "Agência vinculada com sucesso ao projeto." };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   findAll,
   findById,
@@ -426,4 +470,5 @@ module.exports = {
   removeAreaFromProject,
   findAvailableAreasForProject,
   findFundingAgenciesByProjectId,
+  addFundingAgencyToProject,
 };

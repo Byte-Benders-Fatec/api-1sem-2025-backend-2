@@ -128,6 +128,22 @@ const getFundingAgenciesByProjectId = async (req, res) => {
   }
 };
 
+const linkFundingAgencyToProject = async (req, res) => {
+  try {
+    const { id: projectId } = req.params;
+    const { agency_id } = req.body;
+
+    if (!agency_id) {
+      return res.status(400).json({ error: "O campo 'agency_id' é obrigatório." });
+    }
+
+    const result = await projectService.addFundingAgencyToProject(projectId, agency_id);
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao vincular agência ao projeto", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -140,4 +156,5 @@ module.exports = {
   unlinkAreaFromProject,
   getAvailableAreasForProject,
   getFundingAgenciesByProjectId,
+  linkFundingAgencyToProject,
 };

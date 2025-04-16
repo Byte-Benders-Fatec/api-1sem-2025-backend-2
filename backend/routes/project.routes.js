@@ -10,6 +10,7 @@ router.delete("/:projectId/areas/:areaId", projectController.unlinkAreaFromProje
 
 // Agências de Financiamento vinculadas a projeto (N:N)
 router.get("/:id/agencies", projectController.getFundingAgenciesByProjectId);
+router.post("/:id/agencies", projectController.linkFundingAgencyToProject);
 
 // Projetos - CRUD principal
 router.get("/", projectController.getAll);
