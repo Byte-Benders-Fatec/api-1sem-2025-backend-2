@@ -634,6 +634,41 @@ const findTeamsByProjectId = (projectId) => {
   });
 };
 
+const addTeamToProject = async (projectId, teamId) => {
+  try {
+    // Verifica se o projeto existe
+    const [project] = await queryAsync("SELECT id FROM project WHERE id = ?", [projectId]);
+    if (project.length === 0) {
+      throw new Error("Projeto não encontrado.");
+    }
+
+    // Verifica se o time existe
+    const [team] = await queryAsync("SELECT id FROM team WHERE id = ?", [teamId]);
+    if (team.length === 0) {
+      throw new Error("Time não encontrado.");
+    }
+
+    // Verifica se o vínculo já existe
+    const [exists] = await queryAsync(
+      "SELECT * FROM project_team WHERE project_id = ? AND team_id = ?",
+      [projectId, teamId]
+    );
+    if (exists.length > 0) {
+      throw new Error("Este time já está vinculado ao projeto.");
+    }
+
+    // Insere vínculo
+    await queryAsync(
+      "INSERT INTO project_team (project_id, team_id) VALUES (?, ?)",
+      [projectId, teamId]
+    );
+
+    return { message: "Time vinculado com sucesso ao projeto." };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   findAll,
   findById,
@@ -654,4 +689,5 @@ module.exports = {
   removeInstitutionFromProject,
   findAvailableInstitutionsForProject,
   findTeamsByProjectId,
+  addTeamToProject,
 };

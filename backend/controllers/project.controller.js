@@ -222,6 +222,22 @@ const getTeamsByProjectId = async (req, res) => {
   }
 };
 
+const linkTeamToProject = async (req, res) => {
+  try {
+    const { id: projectId } = req.params;
+    const { team_id } = req.body;
+
+    if (!team_id) {
+      return res.status(400).json({ error: "O campo 'team_id' é obrigatório." });
+    }
+
+    const result = await projectService.addTeamToProject(projectId, team_id);
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao vincular time ao projeto", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -242,4 +258,5 @@ module.exports = {
   unlinkInstitutionFromProject,
   getAvailableInstitutionsForProject,
   getTeamsByProjectId,
+  linkTeamToProject,
 };
