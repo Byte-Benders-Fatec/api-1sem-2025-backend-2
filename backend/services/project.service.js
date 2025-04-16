@@ -669,6 +669,30 @@ const addTeamToProject = async (projectId, teamId) => {
   }
 };
 
+const removeTeamFromProject = async (projectId, teamId) => {
+  try {
+    // Verifica se o vínculo existe
+    const [existing] = await queryAsync(
+      "SELECT * FROM project_team WHERE project_id = ? AND team_id = ?",
+      [projectId, teamId]
+    );
+
+    if (existing.length === 0) {
+      throw new Error("Vínculo entre projeto e time não encontrado.");
+    }
+
+    // Remove o vínculo
+    await queryAsync(
+      "DELETE FROM project_team WHERE project_id = ? AND team_id = ?",
+      [projectId, teamId]
+    );
+
+    return { message: "Vínculo removido com sucesso." };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   findAll,
   findById,
@@ -690,4 +714,5 @@ module.exports = {
   findAvailableInstitutionsForProject,
   findTeamsByProjectId,
   addTeamToProject,
+  removeTeamFromProject,
 };

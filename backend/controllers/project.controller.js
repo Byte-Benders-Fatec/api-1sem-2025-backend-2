@@ -238,6 +238,17 @@ const linkTeamToProject = async (req, res) => {
   }
 };
 
+const unlinkTeamFromProject = async (req, res) => {
+  try {
+    const { projectId, teamId } = req.params;
+
+    const result = await projectService.removeTeamFromProject(projectId, teamId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao remover vínculo entre projeto e time", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -259,4 +270,5 @@ module.exports = {
   getAvailableInstitutionsForProject,
   getTeamsByProjectId,
   linkTeamToProject,
+  unlinkTeamFromProject,
 };
