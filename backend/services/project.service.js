@@ -508,6 +508,22 @@ const findAvailableFundingAgenciesForProject = async (projectId) => {
   }
 };
 
+const findInstitutionsByProjectId = (projectId) => {
+  const sql = `
+    SELECT i.*
+    FROM institution i
+    INNER JOIN project_institution pi ON pi.institution_id = i.id
+    WHERE pi.project_id = ?
+  `;
+
+  return new Promise((resolve, reject) => {
+    db.query(sql, [projectId], (err, results) => {
+      if (err) return reject(err);
+      resolve(results);
+    });
+  });
+};
+
 module.exports = {
   findAll,
   findById,
@@ -523,4 +539,5 @@ module.exports = {
   addFundingAgencyToProject,
   removeFundingAgencyFromProject,
   findAvailableFundingAgenciesForProject,
+  findInstitutionsByProjectId,
 };

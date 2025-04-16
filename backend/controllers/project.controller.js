@@ -165,6 +165,16 @@ const getAvailableFundingAgenciesForProject = async (req, res) => {
   }
 };
 
+const getInstitutionsByProjectId = async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const institutions = await projectService.findInstitutionsByProjectId(projectId);
+    res.json(institutions);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar instituições do projeto", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -180,4 +190,5 @@ module.exports = {
   linkFundingAgencyToProject,
   unlinkFundingAgencyFromProject,
   getAvailableFundingAgenciesForProject,
+  getInstitutionsByProjectId,
 };

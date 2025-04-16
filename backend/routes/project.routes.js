@@ -14,6 +14,9 @@ router.get("/:id/available-agencies", projectController.getAvailableFundingAgenc
 router.post("/:id/agencies", projectController.linkFundingAgencyToProject);
 router.delete("/:projectId/agencies/:agencyId", projectController.unlinkFundingAgencyFromProject);
 
+// Instituições vinculadas a projeto (N:N)
+router.get("/:id/institutions", projectController.getInstitutionsByProjectId);
+
 // Projetos - CRUD principal
 router.get("/", projectController.getAll);
 router.get("/filters", projectController.getByFilter);
