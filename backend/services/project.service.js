@@ -568,6 +568,30 @@ const addInstitutionToProject = async (projectId, institutionId) => {
   }
 };
 
+const removeInstitutionFromProject = async (projectId, institutionId) => {
+  try {
+    // Verifica se o vínculo existe
+    const [existing] = await queryAsync(
+      "SELECT * FROM project_institution WHERE project_id = ? AND institution_id = ?",
+      [projectId, institutionId]
+    );
+
+    if (existing.length === 0) {
+      throw new Error("Vínculo entre projeto e instituição não encontrado.");
+    }
+
+    // Remove o vínculo
+    await queryAsync(
+      "DELETE FROM project_institution WHERE project_id = ? AND institution_id = ?",
+      [projectId, institutionId]
+    );
+
+    return { message: "Vínculo removido com sucesso." };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   findAll,
   findById,
@@ -585,4 +609,5 @@ module.exports = {
   findAvailableFundingAgenciesForProject,
   findInstitutionsByProjectId,
   addInstitutionToProject,
+  removeInstitutionFromProject,
 };

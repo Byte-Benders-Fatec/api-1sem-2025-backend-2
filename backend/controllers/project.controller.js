@@ -191,6 +191,17 @@ const linkInstitutionToProject = async (req, res) => {
   }
 };
 
+const unlinkInstitutionFromProject = async (req, res) => {
+  try {
+    const { projectId, institutionId } = req.params;
+
+    const result = await projectService.removeInstitutionFromProject(projectId, institutionId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao remover vínculo entre projeto e instituição", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -208,4 +219,5 @@ module.exports = {
   getAvailableFundingAgenciesForProject,
   getInstitutionsByProjectId,
   linkInstitutionToProject,
+  unlinkInstitutionFromProject,
 };
