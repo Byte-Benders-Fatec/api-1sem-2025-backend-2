@@ -349,6 +349,30 @@ const addAreaToProject = async (projectId, areaId) => {
   }
 };
 
+const removeAreaFromProject = async (projectId, areaId) => {
+  try {
+    // Verifica se o vínculo existe
+    const [existing] = await queryAsync(
+      "SELECT * FROM project_area WHERE project_id = ? AND area_id = ?",
+      [projectId, areaId]
+    );
+
+    if (existing.length === 0) {
+      throw new Error("Vínculo entre projeto e área não encontrado.");
+    }
+
+    // Remove o vínculo
+    await queryAsync(
+      "DELETE FROM project_area WHERE project_id = ? AND area_id = ?",
+      [projectId, areaId]
+    );
+
+    return { message: "Vínculo removido com sucesso." };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   findAll,
   findById,
@@ -358,4 +382,5 @@ module.exports = {
   remove,
   findAreasByProjectId,
   addAreaToProject,
+  removeAreaFromProject,
 };

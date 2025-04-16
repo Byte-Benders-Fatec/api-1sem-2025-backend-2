@@ -97,6 +97,17 @@ const linkAreaToProject = async (req, res) => {
   }
 };
 
+const unlinkAreaFromProject = async (req, res) => {
+  try {
+    const { projectId, areaId } = req.params;
+
+    const result = await projectService.removeAreaFromProject(projectId, areaId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao remover vínculo entre projeto e área", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -106,4 +117,5 @@ module.exports = {
   remove,
   getAreasByProjectId,
   linkAreaToProject,
+  unlinkAreaFromProject,
 };

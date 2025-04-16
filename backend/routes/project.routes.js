@@ -2,10 +2,14 @@ const express = require("express");
 const router = express.Router();
 const projectController = require("../controllers/project.controller");
 
-router.get("/", projectController.getAll);
-router.get("/filters", projectController.getByFilter);
+// Áreas vinculadas a projeto (N:N)
 router.get("/:id/areas", projectController.getAreasByProjectId);
 router.post("/:id/areas", projectController.linkAreaToProject);
+router.delete("/:projectId/areas/:areaId", projectController.unlinkAreaFromProject);
+
+// Projetos - CRUD principal
+router.get("/", projectController.getAll);
+router.get("/filters", projectController.getByFilter);
 router.get("/:id", projectController.getById);
 router.post("/", projectController.create);
 router.put("/:id", projectController.update);
