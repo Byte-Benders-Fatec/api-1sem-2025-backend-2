@@ -202,6 +202,16 @@ const unlinkInstitutionFromProject = async (req, res) => {
   }
 };
 
+const getAvailableInstitutionsForProject = async (req, res) => {
+  try {
+    const { id: projectId } = req.params;
+    const institutions = await projectService.findAvailableInstitutionsForProject(projectId);
+    res.json(institutions);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao buscar instituições disponíveis", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -220,4 +230,5 @@ module.exports = {
   getInstitutionsByProjectId,
   linkInstitutionToProject,
   unlinkInstitutionFromProject,
+  getAvailableInstitutionsForProject,
 };

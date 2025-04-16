@@ -16,6 +16,7 @@ router.delete("/:projectId/agencies/:agencyId", projectController.unlinkFundingA
 
 // Instituições vinculadas a projeto (N:N)
 router.get("/:id/institutions", projectController.getInstitutionsByProjectId);
+router.get("/:id/available-institutions", projectController.getAvailableInstitutionsForProject);
 router.post("/:id/institutions", projectController.linkInstitutionToProject);
 router.delete("/:projectId/institutions/:institutionId", projectController.unlinkInstitutionFromProject);
 

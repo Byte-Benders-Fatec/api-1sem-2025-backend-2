@@ -592,6 +592,32 @@ const removeInstitutionFromProject = async (projectId, institutionId) => {
   }
 };
 
+const findAvailableInstitutionsForProject = async (projectId) => {
+  try {
+    // Verifica se o projeto existe
+    const [project] = await queryAsync("SELECT id FROM project WHERE id = ?", [projectId]);
+    if (project.length === 0) {
+      throw new Error("Projeto não encontrado.");
+    }
+
+    // Retorna instituições que ainda não estão vinculadas ao projeto
+    const sql = `
+      SELECT i.*
+      FROM institution i
+      WHERE i.id NOT IN (
+        SELECT institution_id
+        FROM project_institution
+        WHERE project_id = ?
+      )
+    `;
+
+    const [result] = await queryAsync(sql, [projectId]);
+    return result;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   findAll,
   findById,
@@ -610,4 +636,5 @@ module.exports = {
   findInstitutionsByProjectId,
   addInstitutionToProject,
   removeInstitutionFromProject,
+  findAvailableInstitutionsForProject,
 };
