@@ -719,6 +719,22 @@ const findAvailableTeamsForProject = async (projectId) => {
   }
 };
 
+const findDocumentsByProjectId = (projectId) => {
+  const sql = `
+    SELECT d.id, d.name, d.mime_type, d.is_active, d.created_at, d.updated_at, d.deleted_at
+    FROM document d
+    INNER JOIN project_document pd ON pd.document_id = d.id
+    WHERE pd.project_id = ?
+  `;
+
+  return new Promise((resolve, reject) => {
+    db.query(sql, [projectId], (err, results) => {
+      if (err) return reject(err);
+      resolve(results);
+    });
+  });
+};
+
 module.exports = {
   findAll,
   findById,
@@ -742,4 +758,5 @@ module.exports = {
   addTeamToProject,
   removeTeamFromProject,
   findAvailableTeamsForProject,
+  findDocumentsByProjectId,
 };

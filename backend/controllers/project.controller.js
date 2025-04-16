@@ -259,6 +259,16 @@ const getAvailableTeamsForProject = async (req, res) => {
   }
 };
 
+const getDocumentsByProjectId = async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const documents = await projectService.findDocumentsByProjectId(projectId);
+    res.json(documents);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar documentos do projeto", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -282,4 +292,5 @@ module.exports = {
   linkTeamToProject,
   unlinkTeamFromProject,
   getAvailableTeamsForProject,
+  getDocumentsByProjectId,
 };

@@ -26,6 +26,9 @@ router.get("/:id/available-teams", projectController.getAvailableTeamsForProject
 router.post("/:id/teams", projectController.linkTeamToProject);
 router.delete("/:projectId/teams/:teamId", projectController.unlinkTeamFromProject);
 
+// Documentos vinculados a projeto (N:N)
+router.get("/:id/documents", projectController.getDocumentsByProjectId);
+
 // Projetos - CRUD principal
 router.get("/", projectController.getAll);
 router.get("/filters", projectController.getByFilter);
