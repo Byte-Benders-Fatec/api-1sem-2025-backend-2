@@ -8,6 +8,9 @@ router.get("/:id/available-areas", projectController.getAvailableAreasForProject
 router.post("/:id/areas", projectController.linkAreaToProject);
 router.delete("/:projectId/areas/:areaId", projectController.unlinkAreaFromProject);
 
+// Agências de Financiamento vinculadas a projeto (N:N)
+router.get("/:id/agencies", projectController.getFundingAgenciesByProjectId);
+
 // Projetos - CRUD principal
 router.get("/", projectController.getAll);
 router.get("/filters", projectController.getByFilter);

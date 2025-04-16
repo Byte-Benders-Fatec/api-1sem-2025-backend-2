@@ -118,6 +118,16 @@ const getAvailableAreasForProject = async (req, res) => {
   }
 };
 
+const getFundingAgenciesByProjectId = async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const agencies = await projectService.findFundingAgenciesByProjectId(projectId);
+    res.json(agencies);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar agências do projeto", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -129,4 +139,5 @@ module.exports = {
   linkAreaToProject,
   unlinkAreaFromProject,
   getAvailableAreasForProject,
+  getFundingAgenciesByProjectId,
 };

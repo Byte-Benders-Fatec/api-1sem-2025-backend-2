@@ -399,6 +399,21 @@ const findAvailableAreasForProject = async (projectId) => {
   }
 };
 
+const findFundingAgenciesByProjectId = (projectId) => {
+  const sql = `
+    SELECT fa.*
+    FROM funding_agency fa
+    INNER JOIN project_funding_agency pfa ON pfa.funding_agency_id = fa.id
+    WHERE pfa.project_id = ?
+  `;
+  return new Promise((resolve, reject) => {
+    db.query(sql, [projectId], (err, results) => {
+      if (err) return reject(err);
+      resolve(results);
+    });
+  });
+};
+
 module.exports = {
   findAll,
   findById,
@@ -410,4 +425,5 @@ module.exports = {
   addAreaToProject,
   removeAreaFromProject,
   findAvailableAreasForProject,
+  findFundingAgenciesByProjectId,
 };
