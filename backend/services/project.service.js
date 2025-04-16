@@ -482,6 +482,32 @@ const removeFundingAgencyFromProject = async (projectId, agencyId) => {
   }
 };
 
+const findAvailableFundingAgenciesForProject = async (projectId) => {
+  try {
+    // Verifica se o projeto existe
+    const [project] = await queryAsync("SELECT id FROM project WHERE id = ?", [projectId]);
+    if (project.length === 0) {
+      throw new Error("Projeto não encontrado.");
+    }
+
+    // Retorna agências que ainda não estão vinculadas ao projeto
+    const sql = `
+      SELECT fa.*
+      FROM funding_agency fa
+      WHERE fa.id NOT IN (
+        SELECT funding_agency_id
+        FROM project_funding_agency
+        WHERE project_id = ?
+      )
+    `;
+
+    const [result] = await queryAsync(sql, [projectId]);
+    return result;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   findAll,
   findById,
@@ -496,4 +522,5 @@ module.exports = {
   findFundingAgenciesByProjectId,
   addFundingAgencyToProject,
   removeFundingAgencyFromProject,
+  findAvailableFundingAgenciesForProject,
 };
