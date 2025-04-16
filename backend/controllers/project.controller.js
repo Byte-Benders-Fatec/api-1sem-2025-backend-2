@@ -144,6 +144,17 @@ const linkFundingAgencyToProject = async (req, res) => {
   }
 };
 
+const unlinkFundingAgencyFromProject = async (req, res) => {
+  try {
+    const { projectId, agencyId } = req.params;
+
+    const result = await projectService.removeFundingAgencyFromProject(projectId, agencyId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao remover vínculo entre projeto e agência", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -157,4 +168,5 @@ module.exports = {
   getAvailableAreasForProject,
   getFundingAgenciesByProjectId,
   linkFundingAgencyToProject,
+  unlinkFundingAgencyFromProject,
 };

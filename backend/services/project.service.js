@@ -458,6 +458,30 @@ const addFundingAgencyToProject = async (projectId, agencyId) => {
   }
 };
 
+const removeFundingAgencyFromProject = async (projectId, agencyId) => {
+  try {
+    // Verifica se o vínculo existe
+    const [existing] = await queryAsync(
+      "SELECT * FROM project_funding_agency WHERE project_id = ? AND funding_agency_id = ?",
+      [projectId, agencyId]
+    );
+
+    if (existing.length === 0) {
+      throw new Error("Vínculo entre projeto e agência não encontrado.");
+    }
+
+    // Remove o vínculo
+    await queryAsync(
+      "DELETE FROM project_funding_agency WHERE project_id = ? AND funding_agency_id = ?",
+      [projectId, agencyId]
+    );
+
+    return { message: "Vínculo removido com sucesso." };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   findAll,
   findById,
@@ -471,4 +495,5 @@ module.exports = {
   findAvailableAreasForProject,
   findFundingAgenciesByProjectId,
   addFundingAgencyToProject,
+  removeFundingAgencyFromProject,
 };
