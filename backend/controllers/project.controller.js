@@ -81,6 +81,22 @@ const getAreasByProjectId = async (req, res) => {
   }
 };
 
+const linkAreaToProject = async (req, res) => {
+  try {
+    const { id: projectId } = req.params;
+    const { area_id } = req.body;
+
+    if (!area_id) {
+      return res.status(400).json({ error: "O campo 'area_id' é obrigatório." });
+    }
+
+    const result = await projectService.addAreaToProject(projectId, area_id);
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao vincular área ao projeto",  details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -89,4 +105,5 @@ module.exports = {
   update,
   remove,
   getAreasByProjectId,
+  linkAreaToProject,
 };

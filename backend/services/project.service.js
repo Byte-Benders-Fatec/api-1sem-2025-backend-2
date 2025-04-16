@@ -308,6 +308,47 @@ const findAreasByProjectId = (projectId) => {
   });
 };
 
+const addAreaToProject = async (projectId, areaId) => {
+  try {
+    // Verifica se projeto existe
+    const [project] = await queryAsync("SELECT id FROM project WHERE id = ?", [projectId]);
+    if (project.length === 0) {
+      throw new Error("Projeto não encontrado.");
+    }
+
+    // Verifica se área existe
+    const [area] = await queryAsync("SELECT id FROM area WHERE id = ?", [areaId]);
+    if (area.length === 0) {
+      throw new Error("Área não encontrada.");
+    }
+
+    // Verifica se vínculo já existe
+    const [exists] = await queryAsync(
+      "SELECT * FROM project_area WHERE project_id = ? AND area_id = ?",
+      [projectId, areaId]
+    );
+    if (exists.length > 0) {
+      throw new Error("Vínculo já existente entre o projeto e a área.");
+    }
+
+    // Verifica se o projeto já tem 5 áreas vinculadas
+    const [countResult] = await queryAsync(
+      "SELECT COUNT(*) AS count FROM project_area WHERE project_id = ?",
+      [projectId]
+    );
+    if (countResult[0].count >= 5) {
+      throw new Error("O projeto já possui o número máximo de 5 áreas vinculadas.");
+    }
+
+    // Insere vínculo
+    await queryAsync("INSERT INTO project_area (project_id, area_id) VALUES (?, ?)", [projectId, areaId]);
+
+    return { message: "Área vinculada com sucesso." };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   findAll,
   findById,
@@ -316,4 +357,5 @@ module.exports = {
   update,
   remove,
   findAreasByProjectId,
+  addAreaToProject,
 };
