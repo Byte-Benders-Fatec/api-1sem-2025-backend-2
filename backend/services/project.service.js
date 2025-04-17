@@ -806,6 +806,19 @@ const removeDocumentFromProject = async (projectId, documentId) => {
   }
 };
 
+const findActivitiesByProjectId = (projectId) => {
+  const sql = `
+    SELECT * FROM activity
+    WHERE project_id = ?
+  `;
+  return new Promise((resolve, reject) => {
+    db.query(sql, [projectId], (err, results) => {
+      if (err) return reject(err);
+      resolve(results);
+    });
+  });
+};
+
 module.exports = {
   findAll,
   findById,
@@ -832,4 +845,5 @@ module.exports = {
   findDocumentsByProjectId,
   addDocumentToProject,
   removeDocumentFromProject,
+  findActivitiesByProjectId,
 };

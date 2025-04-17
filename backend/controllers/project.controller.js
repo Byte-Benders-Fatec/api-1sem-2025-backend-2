@@ -1,4 +1,5 @@
 const projectService = require("../services/project.service");
+const activityService = require("../services/activity.service");
 const { generateSqlFilters } = require("../utils/generateSqlFilters");
 
 const getAll = async (req, res) => {
@@ -296,6 +297,28 @@ const unlinkDocumentFromProject = async (req, res) => {
   }
 };
 
+const getActivitiesByProjectId = async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const activities = await projectService.findActivitiesByProjectId(projectId);
+    res.json(activities);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar atividades do projeto", details: err.message });
+  }
+};
+
+const createActivityForProject = async (req, res) => {
+  try {
+    const { id: projectId } = req.params;
+    const payload = { ...req.body, project_id: projectId };
+
+    const result = await activityService.create(payload);
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao criar atividade para o projeto", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -322,4 +345,6 @@ module.exports = {
   getDocumentsByProjectId,
   linkDocumentToProject,
   unlinkDocumentFromProject,
+  getActivitiesByProjectId,
+  createActivityForProject,
 };

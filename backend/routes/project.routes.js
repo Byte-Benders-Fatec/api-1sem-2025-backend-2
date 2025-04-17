@@ -31,6 +31,10 @@ router.get("/:id/documents", projectController.getDocumentsByProjectId);
 router.post("/:id/documents", projectController.linkDocumentToProject);
 router.delete("/:projectId/documents/:documentId", projectController.unlinkDocumentFromProject);
 
+// Atividades vinculadas a projeto (1:N)
+router.get("/:id/activities", projectController.getActivitiesByProjectId);
+router.post("/:id/activities", projectController.createActivityForProject);
+
 // Projetos - CRUD principal
 router.get("/", projectController.getAll);
 router.get("/filters", projectController.getByFilter);
