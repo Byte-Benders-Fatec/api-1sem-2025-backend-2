@@ -252,6 +252,19 @@ const remove = (id) => {
   });
 };
 
+const findTasksByActivityId = (activityId) => {
+  const sql = `
+    SELECT * FROM task
+    WHERE activity_id = ?
+  `;
+  return new Promise((resolve, reject) => {
+    db.query(sql, [activityId], (err, results) => {
+      if (err) return reject(err);
+      resolve(results);
+    });
+  });
+};
+
 module.exports = {
   findAll,
   findByFilters,
@@ -259,4 +272,5 @@ module.exports = {
   create,
   update,
   remove,
+  findTasksByActivityId,
 };

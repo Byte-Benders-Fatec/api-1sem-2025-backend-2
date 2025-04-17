@@ -1,4 +1,5 @@
 const activityService = require("../services/activity.service");
+const taskService = require("../services/task.service");
 const { generateSqlFilters } = require("../utils/generateSqlFilters");
 
 const getAll = async (req, res) => {
@@ -71,6 +72,28 @@ const remove = async (req, res) => {
   }
 };
 
+const getTasksByActivityId = async (req, res) => {
+  try {
+    const activityId = req.params.id;
+    const tasks = await activityService.findTasksByActivityId(activityId);
+    res.json(tasks);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar tarefas da atividade", details: err.message });
+  }
+};
+
+const createTaskForActivity = async (req, res) => {
+  try {
+    const { id: activityId } = req.params;
+    const payload = { ...req.body, activity_id: activityId };
+
+    const result = await taskService.create(payload);
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao criar tarefa para a atividade", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getByFilter,
@@ -78,4 +101,6 @@ module.exports = {
   create,
   update,
   remove,
+  getTasksByActivityId,
+  createTaskForActivity,
 };
