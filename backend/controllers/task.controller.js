@@ -69,6 +69,42 @@ const remove = async (req, res) => {
   }
 };
 
+const getDocumentsByTaskId = async (req, res) => {
+  try {
+    const taskId = req.params.id;
+    const docs = await taskService.findDocumentsByTaskId(taskId);
+    res.json(docs);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar documentos da tarefa", details: err.message });
+  }
+};
+
+const linkDocumentToTask = async (req, res) => {
+  try {
+    const { id: taskId } = req.params;
+    const { document_id } = req.body;
+
+    if (!document_id) {
+      return res.status(400).json({ error: "O campo 'document_id' é obrigatório." });
+    }
+
+    const result = await taskService.addDocumentToTask(taskId, document_id);
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao vincular documento à tarefa", details: err.message });
+  }
+};
+
+const unlinkDocumentFromTask = async (req, res) => {
+  try {
+    const { taskId, documentId } = req.params;
+    const result = await taskService.removeDocumentFromTask(taskId, documentId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao remover documento da tarefa", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getByFilter,
@@ -76,4 +112,7 @@ module.exports = {
   create,
   update,
   remove,
+  getDocumentsByTaskId,
+  linkDocumentToTask,
+  unlinkDocumentFromTask,
 };

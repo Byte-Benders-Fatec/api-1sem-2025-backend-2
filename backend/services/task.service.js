@@ -221,6 +221,92 @@ const remove = (id) => {
   });
 };
 
+const findDocumentsByTaskId = (taskId) => {
+  const sql = `
+    SELECT d.id, d.name, d.mime_type, d.is_active, d.created_at, d.updated_at, d.deleted_at
+    FROM document d
+    INNER JOIN task_document td ON td.document_id = d.id
+    WHERE td.task_id = ?
+  `;
+  return new Promise((resolve, reject) => {
+    db.query(sql, [taskId], (err, results) => {
+      if (err) return reject(err);
+      resolve(results);
+    });
+  });
+};
+
+const addDocumentToTask = async (taskId, documentId) => {
+  try {
+    // Verifica se a tarefa existe
+    const [task] = await queryAsync("SELECT id FROM task WHERE id = ?", [taskId]);
+    if (task.length === 0) {
+      throw new Error("Tarefa não encontrada.");
+    }
+
+    // Verifica se o documento existe
+    const [document] = await queryAsync("SELECT id FROM document WHERE id = ?", [documentId]);
+    if (document.length === 0) {
+      throw new Error("Documento não encontrado.");
+    }
+
+    // Verifica se o vínculo já existe
+    const [exists] = await queryAsync(
+      "SELECT * FROM task_document WHERE task_id = ? AND document_id = ?",
+      [taskId, documentId]
+    );
+    if (exists.length > 0) {
+      throw new Error("Este documento já está vinculado à tarefa.");
+    }
+    
+    // Insere vínculo
+    await queryAsync(
+      "INSERT INTO task_document (task_id, document_id) VALUES (?, ?)",
+      [taskId, documentId]
+    );
+
+    return { message: "Documento vinculado com sucesso à tarefa." };
+  } catch (error) {
+    throw error;
+  }
+};
+
+const removeDocumentFromTask = async (taskId, documentId) => {
+  try {
+    // Verifica se o documento existe
+    const [docResult] = await queryAsync(
+      "SELECT * FROM document WHERE id = ?",
+      [documentId]
+    );
+    if (docResult.length === 0) {
+      throw new Error("Documento não encontrado.");
+    }
+
+    // Verifica se o vínculo existe
+    const [exists] = await queryAsync(
+      "SELECT * FROM task_document WHERE task_id = ? AND document_id = ?",
+      [taskId, documentId]
+    );
+
+    if (exists.length === 0) {
+      throw new Error("Vínculo entre tarefa e documento não encontrado.");
+    }
+
+    // Remove o vínculo
+    await queryAsync(
+      "DELETE FROM task_document WHERE task_id = ? AND document_id = ?",
+      [taskId, documentId]
+    );
+
+    // Remove o documento em si
+    await queryAsync("DELETE FROM document WHERE id = ?", [documentId]);
+
+    return { message: "Documento removido com sucesso." };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   findAll,
   findByFilters,
@@ -228,4 +314,7 @@ module.exports = {
   create,
   update,
   remove,
+  findDocumentsByTaskId,
+  addDocumentToTask,
+  removeDocumentFromTask,
 };
