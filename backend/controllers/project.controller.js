@@ -285,6 +285,17 @@ const linkDocumentToProject = async (req, res) => {
   }
 };
 
+const unlinkDocumentFromProject = async (req, res) => {
+  try {
+    const { projectId, documentId } = req.params;
+
+    const result = await projectService.removeDocumentFromProject(projectId, documentId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao remover documento do projeto", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -310,4 +321,5 @@ module.exports = {
   getAvailableTeamsForProject,
   getDocumentsByProjectId,
   linkDocumentToProject,
+  unlinkDocumentFromProject,
 };

@@ -29,6 +29,7 @@ router.delete("/:projectId/teams/:teamId", projectController.unlinkTeamFromProje
 // Documentos vinculados a projeto (N:N)
 router.get("/:id/documents", projectController.getDocumentsByProjectId);
 router.post("/:id/documents", projectController.linkDocumentToProject);
+router.delete("/:projectId/documents/:documentId", projectController.unlinkDocumentFromProject);
 
 // Projetos - CRUD principal
 router.get("/", projectController.getAll);

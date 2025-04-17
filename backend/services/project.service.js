@@ -770,6 +770,42 @@ const addDocumentToProject = async (projectId, documentId) => {
   }
 };
 
+const removeDocumentFromProject = async (projectId, documentId) => {
+  try {
+    // Verifica se o documento existe
+    const [docResult] = await queryAsync(
+      "SELECT * FROM document WHERE id = ?", 
+      [documentId]
+    );
+    if (docResult.length === 0) {
+      throw new Error("Documento não encontrado.");
+    }
+
+    // Verifica se o vínculo existe
+    const [existing] = await queryAsync(
+      "SELECT * FROM project_document WHERE project_id = ? AND document_id = ?",
+      [projectId, documentId]
+    );
+
+    if (existing.length === 0) {
+      throw new Error("Vínculo entre projeto e documento não encontrado.");
+    }
+
+    // Remove o vínculo
+    await queryAsync(
+      "DELETE FROM project_document WHERE project_id = ? AND document_id = ?",
+      [projectId, documentId]
+    );
+
+    // Remove o documento em si
+    await queryAsync("DELETE FROM document WHERE id = ?", [documentId]);
+
+    return { message: "Documento removido com sucesso." };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   findAll,
   findById,
@@ -795,4 +831,5 @@ module.exports = {
   findAvailableTeamsForProject,
   findDocumentsByProjectId,
   addDocumentToProject,
+  removeDocumentFromProject,
 };
