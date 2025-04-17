@@ -94,6 +94,42 @@ const createTaskForActivity = async (req, res) => {
   }
 };
 
+const getDocumentsByActivityId = async (req, res) => {
+  try {
+    const activityId = req.params.id;
+    const docs = await activityService.findDocumentsByActivityId(activityId);
+    res.json(docs);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar documentos da atividade", details: err.message });
+  }
+};
+
+const linkDocumentToActivity = async (req, res) => {
+  try {
+    const { id: activityId } = req.params;
+    const { document_id } = req.body;
+
+    if (!document_id) {
+      return res.status(400).json({ error: "O campo 'document_id' é obrigatório." });
+    }
+
+    const result = await activityService.addDocumentToActivity(activityId, document_id);
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao vincular documento à atividade", details: err.message });
+  }
+};
+
+const unlinkDocumentFromActivity = async (req, res) => {
+  try {
+    const { activityId, documentId } = req.params;
+    const result = await activityService.removeDocumentFromActivity(activityId, documentId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao remover documento da atividade", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getByFilter,
@@ -103,4 +139,7 @@ module.exports = {
   remove,
   getTasksByActivityId,
   createTaskForActivity,
+  getDocumentsByActivityId,
+  linkDocumentToActivity,
+  unlinkDocumentFromActivity,
 };

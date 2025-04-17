@@ -265,6 +265,92 @@ const findTasksByActivityId = (activityId) => {
   });
 };
 
+const findDocumentsByActivityId = (activityId) => {
+  const sql = `
+    SELECT d.id, d.name, d.mime_type, d.is_active, d.created_at, d.updated_at, d.deleted_at
+    FROM document d
+    INNER JOIN activity_document ad ON ad.document_id = d.id
+    WHERE ad.activity_id = ?
+  `;
+  return new Promise((resolve, reject) => {
+    db.query(sql, [activityId], (err, results) => {
+      if (err) return reject(err);
+      resolve(results);
+    });
+  });
+};
+
+const addDocumentToActivity = async (activityId, documentId) => {
+  try {
+    // Verifica se a atividade existe
+    const [activity] = await queryAsync("SELECT id FROM activity WHERE id = ?", [activityId]);
+    if (activity.length === 0) {
+      throw new Error("Atividade não encontrada.");
+    }
+
+    // Verifica se o documento existe
+    const [document] = await queryAsync("SELECT id FROM document WHERE id = ?", [documentId]);
+    if (document.length === 0) {
+      throw new Error("Documento não encontrado.");
+    }
+
+    // Verifica se o vínculo já existe
+    const [exists] = await queryAsync(
+      "SELECT * FROM activity_document WHERE activity_id = ? AND document_id = ?",
+      [activityId, documentId]
+    );
+    if (exists.length > 0) {
+      throw new Error("Este documento já está vinculado à atividade.");
+    }
+
+    // Insere vínculo
+    await queryAsync(
+      "INSERT INTO activity_document (activity_id, document_id) VALUES (?, ?)",
+      [activityId, documentId]
+    );
+
+    return { message: "Documento vinculado com sucesso à atividade." };
+  } catch (error) {
+    throw error;
+  }
+};
+
+const removeDocumentFromActivity = async (activityId, documentId) => {
+  try {
+    // Verifica se o documento existe
+    const [docResult] = await queryAsync(
+      "SELECT * FROM document WHERE id = ?",
+      [documentId]
+    );
+    if (docResult.length === 0) {
+      throw new Error("Documento não encontrado.");
+    }
+
+    // Verifica se o vínculo existe
+    const [exists] = await queryAsync(
+      "SELECT * FROM activity_document WHERE activity_id = ? AND document_id = ?",
+      [activityId, documentId]
+    );
+
+    if (exists.length === 0) {
+      throw new Error("Vínculo entre atividade e documento não encontrado.");
+    }
+
+    // Remove o vínculo
+    await queryAsync(
+      "DELETE FROM activity_document WHERE activity_id = ? AND document_id = ?",
+      [activityId, documentId]
+    );
+    
+    // Remove o documento em si
+    await queryAsync("DELETE FROM document WHERE id = ?", [documentId]);
+
+    return { message: "Documento removido com sucesso." };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   findAll,
   findByFilters,
@@ -273,4 +359,7 @@ module.exports = {
   update,
   remove,
   findTasksByActivityId,
+  findDocumentsByActivityId,
+  addDocumentToActivity,
+  removeDocumentFromActivity,
 };
