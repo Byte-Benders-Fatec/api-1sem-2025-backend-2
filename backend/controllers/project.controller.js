@@ -269,6 +269,22 @@ const getDocumentsByProjectId = async (req, res) => {
   }
 };
 
+const linkDocumentToProject = async (req, res) => {
+  try {
+    const { id: projectId } = req.params;
+    const { document_id } = req.body;
+
+    if (!document_id) {
+      return res.status(400).json({ error: "O campo 'document_id' é obrigatório." });
+    }
+
+    const result = await projectService.addDocumentToProject(projectId, document_id);
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao vincular documento ao projeto", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -293,4 +309,5 @@ module.exports = {
   unlinkTeamFromProject,
   getAvailableTeamsForProject,
   getDocumentsByProjectId,
+  linkDocumentToProject,
 };
