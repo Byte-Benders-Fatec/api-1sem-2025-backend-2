@@ -105,6 +105,105 @@ const remove = (id) => {
   });
 };
 
+const findUsersByTeamId = (teamId) => {
+  const sql = `
+    SELECT u.*
+    FROM user u
+    INNER JOIN user_team ut ON ut.user_id = u.id
+    WHERE ut.team_id = ?
+  `;
+  return new Promise((resolve, reject) => {
+    db.query(sql, [teamId], (err, results) => {
+      if (err) return reject(err);
+      resolve(results);
+    });
+  });
+};
+
+const findAvailableUsersForTeam = async (teamId) => {
+  try {
+    // Verifica se o time existe
+    const [team] = await queryAsync("SELECT id FROM team WHERE id = ?", [teamId]);
+    if (team.length === 0) {
+      throw new Error("Time não encontrado.");
+    }
+
+    // Retorna usuários que ainda não estão vinculados ao time
+    const sql = `
+      SELECT u.*
+      FROM user u
+      WHERE u.id NOT IN (
+        SELECT user_id
+        FROM user_team
+        WHERE team_id = ?
+      )
+    `;
+
+    const [result] = await queryAsync(sql, [teamId]);
+    return result;
+  } catch (error) {
+    throw error;
+  }
+};
+
+const addUserToTeam = async (teamId, userId) => {
+  try {
+    // Verifica se time existe
+    const [team] = await queryAsync("SELECT id FROM team WHERE id = ?", [teamId]);
+    if (team.length === 0) { 
+      throw new Error("Time não encontrado.");
+    }
+
+    // Verifica se usuário existe
+    const [user] = await queryAsync("SELECT id FROM user WHERE id = ?", [userId]);
+    if (user.length === 0) {
+      throw new Error("Usuário não encontrado.");
+    }
+
+    // Verifica se vínculo já existe
+    const [exists] = await queryAsync(
+      "SELECT * FROM user_team WHERE team_id = ? AND user_id = ?",
+      [teamId, userId]
+    );
+    if (exists.length > 0) {
+      throw new Error("Usuário já está vinculado ao time.");
+    }
+
+    // Insere vínculo
+    await queryAsync(
+      "INSERT INTO user_team (team_id, user_id) VALUES (?, ?)",
+      [teamId, userId]
+    );
+
+    return { message: "Usuário vinculado com sucesso ao time." };
+  } catch (error) {
+    throw error;
+  }
+};
+
+const removeUserFromTeam = async (teamId, userId) => {
+  try {
+    // Verifica se o vínculo existe
+    const [exists] = await queryAsync(
+      "SELECT * FROM user_team WHERE team_id = ? AND user_id = ?",
+      [teamId, userId]
+    );
+    if (exists.length === 0) {
+      throw new Error("Vínculo entre usuário e time não encontrado.");
+    }
+
+    // Remove o vínculo
+    await queryAsync(
+      "DELETE FROM user_team WHERE team_id = ? AND user_id = ?",
+      [teamId, userId]
+    );
+
+    return { message: "Usuário removido do time com sucesso." };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   findAll,
   findByFilters,
@@ -112,4 +211,8 @@ module.exports = {
   create,
   update,
   remove,
+  findUsersByTeamId,
+  findAvailableUsersForTeam,
+  addUserToTeam,
+  removeUserFromTeam,
 };

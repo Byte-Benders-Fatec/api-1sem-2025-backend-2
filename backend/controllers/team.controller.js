@@ -67,6 +67,52 @@ const remove = async (req, res) => {
   }
 };
 
+const getUsersByTeamId = async (req, res) => {
+  try {
+    const teamId = req.params.id;
+    const users = await teamService.findUsersByTeamId(teamId);
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar usuários do time", details: err.message });
+  }
+};
+
+const getAvailableUsersForTeam = async (req, res) => {
+  try {
+    const { id: teamId } = req.params;
+    const users = await teamService.findAvailableUsersForTeam(teamId);
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar usuários disponíveis", details: err.message });
+  }
+};
+
+const linkUserToTeam = async (req, res) => {
+  try {
+    const { id: teamId } = req.params;
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ error: "O campo 'user_id' é obrigatório." });
+    }
+
+    const result = await teamService.addUserToTeam(teamId, user_id);
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao vincular usuário ao time", details: err.message });
+  }
+};
+
+const unlinkUserFromTeam = async (req, res) => {
+  try {
+    const { teamId, userId } = req.params;
+    const result = await teamService.removeUserFromTeam(teamId, userId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao remover vínculo entre usuário e time", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getByFilter,
@@ -74,4 +120,8 @@ module.exports = {
   create,
   update,
   remove,
+  getUsersByTeamId,
+  getAvailableUsersForTeam,
+  linkUserToTeam,
+  unlinkUserFromTeam,
 };
