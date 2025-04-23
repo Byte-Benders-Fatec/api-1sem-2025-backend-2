@@ -824,6 +824,53 @@ const findActivitiesByProjectId = (projectId) => {
   });
 };
 
+const findUsersByProjectId = async (projectId) => {
+  try {
+    // Verifica se o projeto existe
+    // Recupera os IDs de criador e responsável
+    const [project] = await queryAsync("SELECT created_by_id, responsible_user_id FROM project WHERE id = ?", [projectId]);
+    if (project.length === 0) {
+      throw new Error("Projeto não encontrado.");
+    }
+
+    const userIds = new Set();
+
+    // Adiciona o criador
+    if (project[0].created_by_id) {
+      userIds.add(project[0].created_by_id);
+    }
+
+    // Adiciona o responsável (se diferente do criador)
+    if (project[0].responsible_user_id && project[0].responsible_user_id !== project[0].created_by_id) {
+      userIds.add(project[0].responsible_user_id);
+    }
+
+    // Busca usuários vinculados aos times do projeto
+    const [teamUsers] = await queryAsync(`
+      SELECT DISTINCT u.*
+      FROM user u
+      INNER JOIN user_team ut ON ut.user_id = u.id
+      INNER JOIN project_team pt ON pt.team_id = ut.team_id
+      WHERE pt.project_id = ?
+    `, [projectId]);
+
+    teamUsers.forEach(u => userIds.add(u.id));
+    
+    // Consulta todos os usuários únicos de uma vez
+    if (userIds.size === 0) return [];
+    
+    const placeholders = Array.from(userIds).map(() => '?').join(', ');
+    const [users] = await queryAsync(
+      `SELECT u.id, u.name, u.email, u.is_active, u.system_role_id FROM user u WHERE id IN (${placeholders})`
+      , [...userIds]
+    );
+
+    return users;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   findAll,
   findById,
@@ -851,4 +898,5 @@ module.exports = {
   addDocumentToProject,
   removeDocumentFromProject,
   findActivitiesByProjectId,
+  findUsersByProjectId,
 };

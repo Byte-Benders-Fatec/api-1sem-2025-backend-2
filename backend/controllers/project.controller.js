@@ -319,6 +319,16 @@ const createActivityForProject = async (req, res) => {
   }
 };
 
+const getUsersByProjectId = async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const users = await projectService.findUsersByProjectId(projectId);
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar usuários do projeto", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getById,
@@ -347,4 +357,5 @@ module.exports = {
   unlinkDocumentFromProject,
   getActivitiesByProjectId,
   createActivityForProject,
+  getUsersByProjectId,
 };
