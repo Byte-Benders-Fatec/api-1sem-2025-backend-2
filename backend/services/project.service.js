@@ -269,9 +269,8 @@ const update = async (id, { name, code, description, status, start_date, end_dat
     }
 
     if (responsible_user_id !== undefined) {
-      fields.push("responsible_user_id");
+      fields.push("responsible_user_id = ?");
       values.push(responsible_user_id);
-      placeholders.push("?");
     }
 
     if (fields.length === 0) {
