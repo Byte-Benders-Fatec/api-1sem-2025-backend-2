@@ -31,7 +31,7 @@ const findByFilters = (where, values) => {
   });
 };
 
-const create = async ({ name, code, description, status, start_date, end_date, budget, funding_agency_id, created_by_id }) => {
+const create = async ({ name, code, description, status, start_date, end_date, budget, created_by_id, responsible_user_id }) => {
   try {
 
     // Validações básicas obrigatórias
@@ -74,19 +74,19 @@ const create = async ({ name, code, description, status, start_date, end_date, b
       }
     }
 
-    // Verifica se a agência de financiamento existe (se informada)
-    if (funding_agency_id !== undefined) {
-      const [agencyExists] = await queryAsync("SELECT id FROM funding_agency WHERE id = ?", [funding_agency_id]);
-      if (agencyExists.length === 0) {
-        throw new Error(`Agência de financiamento não encontrada, id: ${funding_agency_id}`);
-      }
-    }
-
     // Verifica se o usuário criador existe (se informado)
     if (created_by_id !== undefined) {
       const [userExists] = await queryAsync("SELECT id FROM user WHERE id = ?", [created_by_id]);
       if (userExists.length === 0) {
-        throw new Error(`Usuário não encontrado, id: ${created_by_id}`);
+        throw new Error(`Usuário criador não encontrado, id: ${created_by_id}`);
+      }
+    }
+
+    // Verifica se o usuário responsável existe (se informado)
+    if (responsible_user_id !== undefined && created_by_id !== responsible_user_id) {
+      const [userExists] = await queryAsync("SELECT id FROM user WHERE id = ?", [responsible_user_id]);
+      if (userExists.length === 0) {
+        throw new Error(`Usuário responsável não encontrado, id: ${responsible_user_id}`);
       }
     }
 
@@ -120,14 +120,18 @@ const create = async ({ name, code, description, status, start_date, end_date, b
       placeholders.push("?");
     }
 
-    if (funding_agency_id !== undefined) {
-      fields.push("funding_agency_id");
-      values.push(funding_agency_id);
+    if (created_by_id !== undefined) {
+      fields.push("created_by_id");
+      values.push(created_by_id);
       placeholders.push("?");
     }
 
-    if (created_by_id !== undefined) {
-      fields.push("created_by_id");
+    if (responsible_user_id !== undefined) {
+      fields.push("responsible_user_id");
+      values.push(responsible_user_id);
+      placeholders.push("?");
+    } else if (created_by_id !== undefined) {
+      fields.push("responsible_user_id");
       values.push(created_by_id);
       placeholders.push("?");
     }
@@ -141,7 +145,7 @@ const create = async ({ name, code, description, status, start_date, end_date, b
   }
 };
 
-const update = async (id, { name, code, description, status, start_date, end_date, budget, funding_agency_id, created_by_id }) => {
+const update = async (id, { name, code, description, status, start_date, end_date, budget, created_by_id, responsible_user_id }) => {
   try {
 
     // Verifica se o projeto existe
@@ -199,19 +203,19 @@ const update = async (id, { name, code, description, status, start_date, end_dat
       }
     }
 
-    // Verifica se a agência de financiamento existe (se informada)
-    if (funding_agency_id !== undefined) {
-      const [agencyExists] = await queryAsync("SELECT id FROM funding_agency WHERE id = ?", [funding_agency_id]);
-      if (agencyExists.length === 0) {
-        throw new Error(`Agência de financiamento não encontrada, id: ${funding_agency_id}`);
-      }
-    }
-
     // Verifica se o usuário criador existe (se informado)
     if (created_by_id !== undefined) {
       const [userExists] = await queryAsync("SELECT id FROM user WHERE id = ?", [created_by_id]);
       if (userExists.length === 0) {
         throw new Error(`Usuário não encontrado, id: ${created_by_id}`);
+      }
+    }
+
+    // Verifica se o usuário responsável existe (se informado)
+    if (responsible_user_id !== undefined && created_by_id !== responsible_user_id) {
+      const [userExists] = await queryAsync("SELECT id FROM user WHERE id = ?", [responsible_user_id]);
+      if (userExists.length === 0) {
+        throw new Error(`Usuário responsável não encontrado, id: ${responsible_user_id}`);
       }
     }
 
@@ -259,14 +263,15 @@ const update = async (id, { name, code, description, status, start_date, end_dat
       values.push(budget);
     }
 
-    if (funding_agency_id !== undefined) {
-      fields.push("funding_agency_id = ?");
-      values.push(funding_agency_id);
-    }
-
     if (created_by_id !== undefined) {
       fields.push("created_by_id = ?");
       values.push(created_by_id);
+    }
+
+    if (responsible_user_id !== undefined) {
+      fields.push("responsible_user_id");
+      values.push(responsible_user_id);
+      placeholders.push("?");
     }
 
     if (fields.length === 0) {
