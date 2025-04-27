@@ -1,5 +1,6 @@
 const { db, queryAsync } = require("../configs/db");
 const { v4: uuidv4 } = require("uuid");
+const { formatDate, getDateOnly } = require("../utils/formatDate");
 
 const allowedStatus = ['Não iniciada', 'Em andamento', 'Concluída', 'Cancelada'];
 
@@ -39,7 +40,7 @@ const create = async ({ project_id, name, description, status, allocated_budget,
     }
 
     // Verifica se o projeto existe
-    const [projectExists] = await queryAsync("SELECT id FROM project WHERE id = ?", [project_id]);
+    const [projectExists] = await queryAsync("SELECT id, start_date, end_date FROM project WHERE id = ?", [project_id]);
     if (projectExists.length === 0) {
       throw new Error(`Projeto não encontrado, id: ${project_id}`);
     }
@@ -52,16 +53,31 @@ const create = async ({ project_id, name, description, status, allocated_budget,
       }
     }
 
+    // Obtém as datas do projeto
+    const projectStart = new Date(projectExists[0].start_date);
+    const projectEnd = new Date(projectExists[0].end_date);
+
     // Valida se as datas são válidas e coerentes
     const start = new Date(start_date);
     const end = new Date(end_date);
 
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || isNaN(projectStart.getTime()) || isNaN(projectEnd.getTime())) {
       throw new Error("Datas inválidas fornecidas.");
     }
 
-    if (start > end) {
+    const compStart = getDateOnly(start);
+    const compEnd = getDateOnly(end);
+    const compProjectStart = getDateOnly(projectStart);
+    const compProjectEnd = getDateOnly(projectEnd);
+    
+     // Validação de datas
+    if (compStart > compEnd) {
       throw new Error("A data de início não pode ser posterior à data de término.");
+    }
+
+    // Validação de datas com o projeto
+    if (compStart < compProjectStart || compEnd > compProjectEnd) {
+      throw new Error(`As datas da atividade devem estar dentro do período do projeto: de ${formatDate(projectExists[0].start_date)} até ${formatDate(projectExists[0].end_date)}`);
     }
 
     // Valida status permitido
@@ -124,17 +140,18 @@ const create = async ({ project_id, name, description, status, allocated_budget,
 const update = async (id, { project_id, name, description, status, allocated_budget, start_date, end_date, created_by, is_active }) => {
   try {
     // Verifica se a atividade existe
-    const [activityExists] = await queryAsync("SELECT id, start_date, end_date FROM activity WHERE id = ?", [id]);
+    const [activityExists] = await queryAsync("SELECT id, project_id, start_date, end_date FROM activity WHERE id = ?", [id]);
     if (!activityExists) {
       throw new Error("Atividade não encontrada");
     }
 
-    // Se o project_id foi informado, verifica se o projeto existe
-    if (project_id !== undefined) {
-      const [projectExists] = await queryAsync("SELECT id FROM project WHERE id = ?", [project_id]);
-      if (projectExists.length === 0) {
-        throw new Error(`Projeto não encontrado, id: ${project_id}`);
-      }
+    // Decide qual project_id será usado (novo ou atual)
+    const effectiveProjectId = project_id !== undefined ? project_id : activityExists[0].project_id;
+
+    // Busca o projeto para validar as datas
+    const [projectExists] = await queryAsync("SELECT id, start_date, end_date FROM project WHERE id = ?", [effectiveProjectId]);
+    if (projectExists.length === 0) {
+      throw new Error(`Projeto não encontrado, id: ${effectiveProjectId}`);
     }
 
     // Se o created_by foi informado, verifica se o usuário existe
@@ -162,20 +179,29 @@ const update = async (id, { project_id, name, description, status, allocated_bud
       }
     }
 
-    // Validação de datas mesmo se apenas uma for enviada
-    let start = start_date ? new Date(start_date) : null;
-    let end = end_date ? new Date(end_date) : null;
+    // Validação de datas (apenas se alterar start_date ou end_date)
+    if (start_date !== undefined || end_date !== undefined) {
+      const projectStart = new Date(projectExists[0].start_date);
+      const projectEnd = new Date(projectExists[0].end_date);
 
-    if (start || end) {
-      if (!start) start = activityExists[0].start_date;
-      if (!end) end = activityExists[0].end_date;
+      let start = start_date ? new Date(start_date) : new Date(activityExists[0].start_date);
+      let end = end_date ? new Date(end_date) : new Date(activityExists[0].end_date);
 
-      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      if (isNaN(start.getTime()) || isNaN(end.getTime()) || isNaN(projectStart.getTime()) || isNaN(projectEnd.getTime())) {
         throw new Error("Datas inválidas fornecidas.");
       }
 
-      if (start > end) {
+      const compStart = getDateOnly(start);
+      const compEnd = getDateOnly(end);
+      const compProjectStart = getDateOnly(projectStart);
+      const compProjectEnd = getDateOnly(projectEnd);
+
+      if (compStart > compEnd) {
         throw new Error("A data de início não pode ser posterior à data de término.");
+      }
+
+      if (compStart < compProjectStart || compEnd > compProjectEnd) {
+        throw new Error(`As datas da atividade precisam estar entre ${formatDate(projectExists[0].start_date)} e ${formatDate(projectExists[0].end_date)}.`);
       }
     }
 
@@ -187,42 +213,34 @@ const update = async (id, { project_id, name, description, status, allocated_bud
       fields.push("project_id = ?");
       values.push(project_id);
     }
-
     if (name !== undefined) {
       fields.push("name = ?");
       values.push(name);
     }
-
     if (description !== undefined) {
       fields.push("description = ?");
       values.push(description);
     }
-
     if (status !== undefined) {
       fields.push("status = ?");
       values.push(status);
     }
-
     if (allocated_budget !== undefined) {
       fields.push("allocated_budget = ?");
       values.push(allocated_budget);
     }
-
     if (start_date !== undefined) {
       fields.push("start_date = ?");
       values.push(start_date);
     }
-
     if (end_date !== undefined) {
       fields.push("end_date = ?");
       values.push(end_date);
     }
-
     if (created_by !== undefined) {
       fields.push("created_by = ?");
       values.push(created_by);
     }
-
     if (is_active !== undefined) {
       fields.push("is_active = ?");
       values.push(is_active);
