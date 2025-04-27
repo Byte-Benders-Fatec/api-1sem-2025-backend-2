@@ -40,7 +40,7 @@ const create = async ({ project_id, name, description, status, allocated_budget,
     }
 
     // Verifica se o projeto existe
-    const [projectExists] = await queryAsync("SELECT id, start_date, end_date FROM project WHERE id = ?", [project_id]);
+    const [projectExists] = await queryAsync("SELECT id, start_date, end_date, budget FROM project WHERE id = ?", [project_id]);
     if (projectExists.length === 0) {
       throw new Error(`Projeto não encontrado, id: ${project_id}`);
     }
@@ -90,13 +90,27 @@ const create = async ({ project_id, name, description, status, allocated_budget,
       if (isNaN(allocated_budget)) {
         throw new Error("O valor de orçamento alocado deve ser um número válido.");
       }
-
+    
       const budget = parseFloat(allocated_budget);
       if (budget < 0) {
         throw new Error("O valor de orçamento alocado não pode ser negativo.");
       }
+    
+      // Valida orçamento acumulado
+      const [budgetResult] = await queryAsync(`
+        SELECT SUM(allocated_budget) AS total_allocated
+        FROM activity
+        WHERE project_id = ?
+      `, [project_id]);
+    
+      const totalAllocated = parseFloat(budgetResult[0].total_allocated || 0);
+      const projectBudget = parseFloat(projectExists[0].budget);
+    
+      if (totalAllocated + budget > projectBudget) {
+        throw new Error(`O orçamento total das atividades (R$ ${(totalAllocated + budget).toFixed(2)}) ultrapassa o orçamento do projeto (R$ ${projectBudget.toFixed(2)}).`);
+      }
     }
-
+    
     // Define is_active baseado no status
     let is_active = true;
     if (status === "Concluída" || status === "Cancelada") {
@@ -154,7 +168,7 @@ const update = async (id, { project_id, name, description, status, allocated_bud
     const effectiveProjectId = project_id !== undefined ? project_id : activityExists[0].project_id;
 
     // Busca o projeto para validar as datas
-    const [projectExists] = await queryAsync("SELECT id, start_date, end_date FROM project WHERE id = ?", [effectiveProjectId]);
+    const [projectExists] = await queryAsync("SELECT id, start_date, end_date, budget FROM project WHERE id = ?", [effectiveProjectId]);
     if (projectExists.length === 0) {
       throw new Error(`Projeto não encontrado, id: ${effectiveProjectId}`);
     }
@@ -177,10 +191,25 @@ const update = async (id, { project_id, name, description, status, allocated_bud
       if (isNaN(allocated_budget)) {
         throw new Error("O valor de orçamento alocado deve ser um número válido.");
       }
-
+    
       const budget = parseFloat(allocated_budget);
       if (budget < 0) {
         throw new Error("O valor de orçamento alocado não pode ser negativo.");
+      }
+    
+      // Valida orçamento acumulado no update
+      const [budgetResult] = await queryAsync(`
+        SELECT SUM(allocated_budget) AS total_allocated
+        FROM activity
+        WHERE project_id = ?
+          AND id != ?
+      `, [effectiveProjectId, id]);
+    
+      const totalAllocatedOtherActivities = parseFloat(budgetResult[0].total_allocated || 0);
+      const projectBudget = parseFloat(projectExists[0].budget);
+    
+      if (totalAllocatedOtherActivities + budget > projectBudget) {
+        throw new Error(`O orçamento total das atividades (R$ ${(totalAllocatedOtherActivities + budget).toFixed(2)}) ultrapassa o orçamento do projeto (R$ ${projectBudget.toFixed(2)}).`);
       }
     }
 
