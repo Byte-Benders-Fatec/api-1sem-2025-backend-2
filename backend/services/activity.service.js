@@ -70,7 +70,7 @@ const create = async ({ project_id, name, description, status, allocated_budget,
     const compProjectStart = getDateOnly(projectStart);
     const compProjectEnd = getDateOnly(projectEnd);
     
-     // Validação de datas
+    // Validação de datas
     if (compStart > compEnd) {
       throw new Error("A data de início não pode ser posterior à data de término.");
     }
@@ -97,9 +97,14 @@ const create = async ({ project_id, name, description, status, allocated_budget,
       }
     }
 
+    // Define is_active baseado no status
+    let is_active = true;
+    if (status === "Concluída" || status === "Cancelada") {
+      is_active = false;
+    }
+
     // Monta dinamicamente os campos a serem inseridos
     const id = uuidv4();
-    const is_active = true;
     const fields = ["id", "project_id", "name", "start_date", "end_date", "is_active"];
     const values = [id, project_id, name, start_date, end_date, is_active];
     const placeholders = ["?", "?", "?", "?", "?", "?"];
@@ -137,7 +142,7 @@ const create = async ({ project_id, name, description, status, allocated_budget,
   }
 };
 
-const update = async (id, { project_id, name, description, status, allocated_budget, start_date, end_date, created_by, is_active }) => {
+const update = async (id, { project_id, name, description, status, allocated_budget, start_date, end_date, created_by }) => {
   try {
     // Verifica se a atividade existe
     const [activityExists] = await queryAsync("SELECT id, project_id, start_date, end_date FROM activity WHERE id = ?", [id]);
@@ -224,6 +229,15 @@ const update = async (id, { project_id, name, description, status, allocated_bud
     if (status !== undefined) {
       fields.push("status = ?");
       values.push(status);
+
+      // Calcula is_active baseado no status
+      if (status === "Concluída" || status === "Cancelada") {
+        fields.push("is_active = ?");
+        values.push(false);
+      } else if (status === "Não iniciada" || status === "Em andamento") {
+        fields.push("is_active = ?");
+        values.push(true);
+      }
     }
     if (allocated_budget !== undefined) {
       fields.push("allocated_budget = ?");
@@ -240,10 +254,6 @@ const update = async (id, { project_id, name, description, status, allocated_bud
     if (created_by !== undefined) {
       fields.push("created_by = ?");
       values.push(created_by);
-    }
-    if (is_active !== undefined) {
-      fields.push("is_active = ?");
-      values.push(is_active);
     }
 
     if (fields.length === 0) {

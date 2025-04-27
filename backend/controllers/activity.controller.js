@@ -52,10 +52,10 @@ const create = async (req, res) => {
 
 const update = async (req, res) => {
   const id = req.params.id;
-  const { project_id, name, description, status, allocated_budget, start_date, end_date, created_by, is_active } = req.body;
+  const { project_id, name, description, status, allocated_budget, start_date, end_date, created_by } = req.body;
 
   try {
-    const result = await activityService.update(id, { project_id, name, description, status, allocated_budget, start_date, end_date, created_by, is_active });
+    const result = await activityService.update(id, { project_id, name, description, status, allocated_budget, start_date, end_date, created_by });
     res.status(200).json({ message: "Atividade atualizada com sucesso", result });
   } catch (err) {
     res.status(400).json({ error: "Erro ao atualizar atividade", details: err.message });
