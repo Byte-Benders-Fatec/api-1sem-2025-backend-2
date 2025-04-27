@@ -38,8 +38,8 @@ const create = async ({ activity_id, user_id, title, description, time_spent_min
       throw new Error("É necessário fornecer id da atividade e título.");
     }
 
-    // Verifica se a atividade existe
-    const [activityExists] = await queryAsync("SELECT id FROM activity WHERE id = ?", [activity_id]);
+    // Verifica se a atividade existe e recupera o orçamento
+    const [activityExists] = await queryAsync("SELECT id, allocated_budget FROM activity WHERE id = ?", [activity_id]);
     if (activityExists.length === 0) {
       throw new Error(`Atividade não encontrada, id: ${activity_id}`);
     }
@@ -73,6 +73,21 @@ const create = async ({ activity_id, user_id, title, description, time_spent_min
       const price = parseFloat(cost);
       if (price < 0) {
         throw new Error("O valor de custo não pode ser negativo.");
+      }
+
+      // Valida custo total das tarefas na atividade
+      const [costResult] = await queryAsync(`
+        SELECT SUM(cost) AS total_cost
+        FROM task
+        WHERE activity_id = ?
+      `, [activity_id]);
+
+      const totalCost = parseFloat(costResult[0].total_cost || 0);
+      const newTotal = parseFloat((totalCost + price).toFixed(2));
+      const activityBudget = parseFloat(activityExists[0].allocated_budget || 0);
+
+      if (newTotal > activityBudget) {
+        throw new Error(`O custo total das tarefas (R$ ${newTotal.toFixed(2)}) ultrapassa o orçamento da atividade (R$ ${activityBudget.toFixed(2)}).`);
       }
     }
 
@@ -118,17 +133,19 @@ const create = async ({ activity_id, user_id, title, description, time_spent_min
 const update = async (id, { activity_id, user_id, title, description, time_spent_minutes, cost }) => {
   try {
     // Verifica se a tarefa existe
-    const [taskExists] = await queryAsync("SELECT id FROM activity WHERE id = ?", [id]);
+    const [taskExists] = await queryAsync("SELECT id, activity_id, cost FROM task WHERE id = ?", [id]);
     if (!taskExists) {
       throw new Error("Tarefa não encontrada");
     }
 
-    // Se o activity_id foi informado, verifica se a atividade existe
-    if (activity_id !== undefined) {
-      const [activityExists] = await queryAsync("SELECT id FROM activity WHERE id = ?", [activity_id]);
-      if (activityExists.length === 0) {
-        throw new Error(`Atividade não encontrada, id: ${activity_id}`);
-      }
+    const currentActivityId = taskExists[0].activity_id;
+    const currentCost = parseFloat(taskExists[0].cost) || 0;
+    const effectiveActivityId = activity_id !== undefined ? activity_id : currentActivityId;
+
+    // Verifica se a atividade existe
+    const [activityExists] = await queryAsync("SELECT id, allocated_budget FROM activity WHERE id = ?", [effectiveActivityId]);
+    if (activityExists.length === 0) {
+      throw new Error(`Atividade não encontrada, id: ${effectiveActivityId}`);
     }
 
     // Se o user_id foi informado, verifica se o usuário existe
@@ -160,6 +177,22 @@ const update = async (id, { activity_id, user_id, title, description, time_spent
       const price = parseFloat(cost);
       if (price < 0) {
         throw new Error("O valor de custo não pode ser negativo.");
+      }
+
+      // Valida custo total das tarefas na atividade
+      const [costResult] = await queryAsync(`
+        SELECT SUM(cost) AS total_cost
+        FROM task
+        WHERE activity_id = ?
+          AND id != ?
+      `, [effectiveActivityId, id]);
+
+      const totalOtherTasks = parseFloat(costResult[0].total_cost || 0);
+      const newTotal = parseFloat((totalOtherTasks + price).toFixed(2));
+      const activityBudget = parseFloat(activityExists[0].allocated_budget || 0);
+
+      if (newTotal > activityBudget) {
+        throw new Error(`O custo total das tarefas (R$ ${newTotal.toFixed(2)}) ultrapassa o orçamento da atividade (R$ ${activityBudget.toFixed(2)}).`);
       }
     }
 
@@ -206,7 +239,7 @@ const update = async (id, { activity_id, user_id, title, description, time_spent
 
     const result = await queryAsync(sql, values);
 
-    return { id, updated: result[0].affectedRows > 0};
+    return { id, updated: result[0].affectedRows > 0 };
   } catch (error) {
     throw error;
   }

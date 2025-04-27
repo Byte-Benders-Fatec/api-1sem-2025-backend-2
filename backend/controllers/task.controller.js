@@ -43,7 +43,7 @@ const create = async (req, res) => {
     const result = await taskService.create({ activity_id, user_id, title, description, time_spent_minutes, cost });
     res.status(201).json(result);
   } catch (err) {
-    res.status(500).json({ error: "Erro ao criar tarefa" });
+    res.status(500).json({ error: "Erro ao criar tarefa", details: err.message });
   }
 };
 
@@ -55,7 +55,7 @@ const update = async (req, res) => {
     const result = await taskService.update(id, { activity_id, user_id, title, description, time_spent_minutes, cost });
     res.status(200).json({ message: "Tarefa atualizada com sucesso", result });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: "Erro ao atualizar tarefa", details: err.message });
   }
 };
 
