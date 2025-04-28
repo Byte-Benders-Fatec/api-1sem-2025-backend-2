@@ -385,15 +385,13 @@ const findAvailableAreasForProject = async (projectId) => {
       throw new Error("Projeto não encontrado.");
     }
 
-    // Retorna áreas que ainda não estão vinculadas ao projeto
+    // Retorna áreas ativas que ainda não estão vinculadas ao projeto
     const sql = `
       SELECT a.*
       FROM area a
-      WHERE a.id NOT IN (
-        SELECT area_id
-        FROM project_area
-        WHERE project_id = ?
-      )
+      LEFT JOIN project_area pa ON pa.area_id = a.id AND pa.project_id = ?
+      WHERE a.is_active = 1
+        AND pa.area_id IS NULL
     `;
 
     const [result] = await queryAsync(sql, [projectId]);
@@ -494,15 +492,13 @@ const findAvailableFundingAgenciesForProject = async (projectId) => {
       throw new Error("Projeto não encontrado.");
     }
 
-    // Retorna agências que ainda não estão vinculadas ao projeto
+    // Retorna agências de fomento ativas que ainda não estão vinculadas ao projeto
     const sql = `
       SELECT fa.*
       FROM funding_agency fa
-      WHERE fa.id NOT IN (
-        SELECT funding_agency_id
-        FROM project_funding_agency
-        WHERE project_id = ?
-      )
+      LEFT JOIN project_funding_agency pfa ON pfa.funding_agency_id = fa.id AND pfa.project_id = ?
+      WHERE fa.is_active = 1
+        AND pfa.funding_agency_id IS NULL
     `;
 
     const [result] = await queryAsync(sql, [projectId]);
@@ -604,15 +600,13 @@ const findAvailableInstitutionsForProject = async (projectId) => {
       throw new Error("Projeto não encontrado.");
     }
 
-    // Retorna instituições que ainda não estão vinculadas ao projeto
+    // Retorna instituições ativas que ainda não estão vinculadas ao projeto
     const sql = `
       SELECT i.*
       FROM institution i
-      WHERE i.id NOT IN (
-        SELECT institution_id
-        FROM project_institution
-        WHERE project_id = ?
-      )
+      LEFT JOIN project_institution pi ON pi.institution_id = i.id AND pi.project_id = ?
+      WHERE i.is_active = 1
+        AND pi.institution_id IS NULL
     `;
 
     const [result] = await queryAsync(sql, [projectId]);
@@ -705,15 +699,13 @@ const findAvailableTeamsForProject = async (projectId) => {
       throw new Error("Projeto não encontrado.");
     }
 
-    // Retorna times não vinculados
+    // Retorna times ativos que ainda não estão vinculados ao projeto
     const sql = `
       SELECT t.*
       FROM team t
-      WHERE t.id NOT IN (
-        SELECT team_id
-        FROM project_team
-        WHERE project_id = ?
-      )
+      LEFT JOIN project_team pt ON pt.team_id = t.id AND pt.project_id = ?
+      WHERE t.is_active = 1
+        AND pt.team_id IS NULL
     `;
 
     const [result] = await queryAsync(sql, [projectId]);
