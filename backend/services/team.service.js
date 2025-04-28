@@ -128,15 +128,13 @@ const findAvailableUsersForTeam = async (teamId) => {
       throw new Error("Time não encontrado.");
     }
 
-    // Retorna usuários que ainda não estão vinculados ao time
+    // Retorna usuários ativos que ainda não estão vinculados ao time
     const sql = `
       SELECT u.*
       FROM user u
-      WHERE u.id NOT IN (
-        SELECT user_id
-        FROM user_team
-        WHERE team_id = ?
-      )
+      LEFT JOIN user_team ut ON ut.user_id = u.id AND ut.team_id = ?
+      WHERE u.is_active = 1
+        AND ut.user_id IS NULL
     `;
 
     const [result] = await queryAsync(sql, [teamId]);
