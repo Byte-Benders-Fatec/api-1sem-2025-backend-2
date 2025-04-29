@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const projectController = require("../controllers/project.controller");
+const { upload, handleMulterError } = require("../middlewares/upload.middleware");
 
 // Áreas vinculadas a projeto (N:N)
 router.get("/:id/areas", projectController.getAreasByProjectId);
@@ -31,6 +32,7 @@ router.get("/:id/users", projectController.getUsersByProjectId);
 
 // Documentos vinculados a projeto (N:N)
 router.get("/:id/documents", projectController.getDocumentsByProjectId);
+router.post("/:id/documents/upload", upload.single("file"), projectController.uploadAndLinkDocumentToProject);
 router.post("/:id/documents", projectController.linkDocumentToProject);
 router.delete("/:projectId/documents/:documentId", projectController.unlinkDocumentFromProject);
 
@@ -45,5 +47,8 @@ router.get("/:id", projectController.getById);
 router.post("/", projectController.create);
 router.put("/:id", projectController.update);
 router.delete("/:id", projectController.remove);
+
+// Middleware para capturar erros do multer
+router.use(handleMulterError);
 
 module.exports = router;

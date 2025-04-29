@@ -1,4 +1,5 @@
 const projectService = require("../services/project.service");
+const documentService = require("../services/document.service");
 const activityService = require("../services/activity.service");
 const { generateSqlFilters } = require("../utils/generateSqlFilters");
 
@@ -297,6 +298,35 @@ const unlinkDocumentFromProject = async (req, res) => {
   }
 };
 
+const uploadAndLinkDocumentToProject = async (req, res) => {
+  try {
+    const { id: projectId } = req.params;
+    const { originalname, mimetype, buffer } = req.file;
+
+    if (!originalname || !mimetype || !buffer) {
+      return res.status(400).json({ error: "Nome, tipo e conteúdo do arquivo são obrigatórios." });
+    }
+
+    // Cria o documento
+    const document = await documentService.create({
+      name: originalname,
+      mime_type: mimetype,
+      content: buffer,
+    });
+
+    // Cria o vínculo com o projeto
+    const result = await projectService.addDocumentToProject(projectId, document.id);
+
+    res.status(201).json({
+      message: "Documento criado e vinculado ao projeto com sucesso.",
+      documentId: document.id
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao salvar e vincular documento.", details: err.message });
+  }
+};
+
 const getActivitiesByProjectId = async (req, res) => {
   try {
     const projectId = req.params.id;
@@ -355,6 +385,7 @@ module.exports = {
   getDocumentsByProjectId,
   linkDocumentToProject,
   unlinkDocumentFromProject,
+  uploadAndLinkDocumentToProject,
   getActivitiesByProjectId,
   createActivityForProject,
   getUsersByProjectId,
