@@ -1,4 +1,5 @@
 const activityService = require("../services/activity.service");
+const documentService = require("../services/document.service");
 const taskService = require("../services/task.service");
 const { generateSqlFilters } = require("../utils/generateSqlFilters");
 
@@ -130,6 +131,35 @@ const unlinkDocumentFromActivity = async (req, res) => {
   }
 };
 
+const uploadAndLinkDocumentToActivity = async (req, res) => {
+  try {
+    const { id: activityId } = req.params;
+    const { originalname, mimetype, buffer } = req.file;
+
+    if (!originalname || !mimetype || !buffer) {
+      return res.status(400).json({ error: "Nome, tipo e conteúdo do arquivo são obrigatórios." });
+    }
+
+    // Cria o documento
+    const document = await documentService.create({
+      name: originalname,
+      mime_type: mimetype,
+      content: buffer,
+    });
+
+    // Cria o vínculo com a atividade
+    const result = await activityService.addDocumentToActivity(activityId, document.id);
+
+    res.status(201).json({
+      message: "Documento criado e vinculado à atividade com sucesso.",
+      documentId: document.id
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao salvar e vincular documento.", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getByFilter,
@@ -142,4 +172,5 @@ module.exports = {
   getDocumentsByActivityId,
   linkDocumentToActivity,
   unlinkDocumentFromActivity,
+  uploadAndLinkDocumentToActivity,
 };
