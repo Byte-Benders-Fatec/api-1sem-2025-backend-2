@@ -1,4 +1,5 @@
 const taskService = require("../services/task.service");
+const documentService = require("../services/document.service");
 const { generateSqlFilters } = require("../utils/generateSqlFilters");
 
 const getAll = async (req, res) => {
@@ -105,6 +106,35 @@ const unlinkDocumentFromTask = async (req, res) => {
   }
 };
 
+const uploadAndLinkDocumentToTask = async (req, res) => {
+  try {
+    const { id: taskId } = req.params;
+    const { originalname, mimetype, buffer } = req.file;
+
+    if (!originalname || !mimetype || !buffer) {
+      return res.status(400).json({ error: "Nome, tipo e conteúdo do arquivo são obrigatórios." });
+    }
+
+    // Primeiro: cria o documento
+    const document = await documentService.create({
+      name: originalname,
+      mime_type: mimetype,
+      content: buffer,
+    });
+
+    // Depois: cria o vínculo com a tarefa
+    const result = await taskService.addDocumentToTask(taskId, document.id);
+
+    res.status(201).json({
+      message: "Documento criado e vinculado à tarefa com sucesso.",
+      documentId: document.id
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao salvar e vincular documento.", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getByFilter,
@@ -115,4 +145,5 @@ module.exports = {
   getDocumentsByTaskId,
   linkDocumentToTask,
   unlinkDocumentFromTask,
+  uploadAndLinkDocumentToTask,
 };
