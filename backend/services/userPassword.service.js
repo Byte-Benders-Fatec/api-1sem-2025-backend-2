@@ -128,10 +128,54 @@ const verifyPermanentPassword = async (user, current, inputPassword) => {
     return true;
 };
 
-const verifyTemporaryPassword = async (user, temporaryPassword, inputPassword) => {
-  const userTemp = user;
-  const temp = temporaryPassword;
-  const input = inputPassword;
+const verifyTemporaryPassword = async (user, current, inputPassword) => {
+  const now = new Date();
+
+  // Verifica expiração da senha temporária
+  if (current.expires_at && new Date(current.expires_at) < now) {
+    await queryAsync(
+      `UPDATE user_password SET status = 'expired' WHERE id = ?`,
+      [current.id]
+    );
+    throw new Error("Senha temporária expirada. Solicite uma nova.");
+  }
+
+  // Verifica se a senha está correta
+  const match = await bcrypt.compare(inputPassword, current.password_hash);
+  if (!match) {
+    const newAttempts = current.attempts + 1;
+
+    if (newAttempts >= current.max_attempts) {
+      // Marca como bloqueada
+      await queryAsync(
+        `UPDATE user_password SET attempts = ?, status = 'blocked' WHERE id = ?`,
+        [newAttempts, current.id]
+      );
+
+      await sendEmail({
+        to: user.email,
+        subject: 'Senha temporária bloqueada',
+        text: `Você excedeu o número máximo de tentativas com sua senha temporária. Por favor, gere uma nova para continuar.`
+      });
+
+      throw new Error("Senha temporária bloqueada por excesso de tentativas. Solicite uma nova.");
+    }
+
+    // Apenas incrementa tentativa
+    await queryAsync(
+      `UPDATE user_password SET attempts = ? WHERE id = ?`,
+      [newAttempts, current.id]
+    );
+
+    throw new Error("Senha temporária incorreta.");
+  }
+
+  // Sucesso: marca como expirada (uso único)
+  await queryAsync(
+    `UPDATE user_password SET status = 'expired' WHERE id = ?`,
+    [current.id]
+  );
+
   return true;
 };
 
