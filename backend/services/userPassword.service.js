@@ -44,7 +44,7 @@ const validatePassword = (password) => {
     return true;
 };
 
-const verifyPassword = async (email, inputPassword) => {
+const verifyPermanentPassword = async (user, current, inputPassword) => {
     
     // Configurações de bloqueio
     const configs = {
@@ -61,27 +61,9 @@ const verifyPassword = async (email, inputPassword) => {
           3: 1
         }
     }
-
-    // Verifica se o usuário existe
-    const [userCheck] = await queryAsync('SELECT id, name, email FROM user WHERE email = ?', [email]);
-    const user = userCheck[0];
-    if (!user) throw new Error("Usuário não encontrado.");
-    const userId = user.id;
-  
-    // Busca a senha permanente atual com status válido
-    const [pwRows] = await queryAsync(
-      `SELECT id, password_hash, attempts, max_attempts, locked_until, lockout_level
-       FROM user_password
-       WHERE user_id = ? AND is_temp = false AND status = 'valid'
-       ORDER BY created_at DESC LIMIT 1`,
-      [userId]
-    );
-  
-    const current = pwRows[0];
-    if (!current) throw new Error("Senha atual não encontrada.");
   
     const now = new Date();
-    const lockedUntil = current.locked_until ? current.locked_until : null;
+    const lockedUntil = current.locked_until ? new Date (current.locked_until) : null;
   
     // Caso esteja bloqueada, mas já tenha expirado: resetar
     if (lockedUntil && lockedUntil < now) {
@@ -146,11 +128,59 @@ const verifyPassword = async (email, inputPassword) => {
     return true;
 };
 
+const verifyTemporaryPassword = async (user, temporaryPassword, inputPassword) => {
+  const userTemp = user;
+  const temp = temporaryPassword;
+  const input = inputPassword;
+  return true;
+};
+
+const verifyPassword = async (email, inputPassword) => {
+  // Verifica se o usuário existe e está ativo
+  const [userRows] = await queryAsync(
+    'SELECT id, name, email FROM user WHERE email = ? AND is_active = TRUE',
+    [email]
+  );
+  const user = userRows[0];
+  if (!user) throw new Error("Usuário não encontrado.");
+  const userId = user.id;
+
+  // Busca a senha permanente válida
+  const [permRows] = await queryAsync(
+    `SELECT * FROM user_password
+     WHERE user_id = ? AND is_temp = false AND status = 'valid'
+     ORDER BY created_at DESC LIMIT 1`,
+    [userId]
+  );
+  const permanentPassword = permRows[0];
+
+  // Busca a senha temporária válida
+  const [tempRows] = await queryAsync(
+    `SELECT * FROM user_password
+     WHERE user_id = ? AND is_temp = true AND status = 'valid'
+     ORDER BY created_at DESC LIMIT 1`,
+    [userId]
+  );
+  const temporaryPassword = tempRows[0];
+
+  // Nenhuma senha válida encontrada
+  if (!permanentPassword && !temporaryPassword) {
+    throw new Error('Nenhuma senha válida foi encontrada para este usuário.');
+  }
+
+  // Verificação delegada
+  if (temporaryPassword) {
+    return await verifyTemporaryPassword(user, temporaryPassword, inputPassword);
+  } else {
+    return await verifyPermanentPassword(user, permanentPassword, inputPassword);
+  }
+};
+
 const setPassword = async (email, newPassword, currentPassword = null) => {
   try {
 
     // Verifica se o usuário existe
-    const [userCheck] = await queryAsync('SELECT id, name, email FROM user WHERE email = ?', [email]);
+    const [userCheck] = await queryAsync('SELECT id, name, email FROM user WHERE email = ? AND is_active = TRUE', [email]);
     const user = userCheck[0];
     if (!user) throw new Error("Usuário não encontrado.");
     const userId = user.id;
@@ -177,11 +207,11 @@ const setPassword = async (email, newPassword, currentPassword = null) => {
         }
     }
 
-    // Bloqueia senhas anteriores
+    // Bloqueia senhas anteriores (temporárias ou permanentes)
     await queryAsync(
         `UPDATE user_password
         SET status = 'blocked'
-        WHERE user_id = ? AND is_temp = false`,
+        WHERE user_id = ? AND status = 'valid'`,
         [userId]
     );
 
@@ -206,16 +236,37 @@ const setPassword = async (email, newPassword, currentPassword = null) => {
         ]
     );
       
-    // Remove senhas antigas (mantém no máximo 5)
+    // Remove senhas antigas permanentes (mantém no máximo 5 contando com a válida)
     const [all] = await queryAsync(
-        `SELECT id FROM user_password
-        WHERE user_id = ? AND is_temp = false
-        ORDER BY created_at DESC`,
-        [userId]
+      `SELECT id FROM user_password
+       WHERE user_id = ?
+         AND is_temp = FALSE
+         AND status IN ('expired', 'blocked')
+       ORDER BY created_at DESC`,
+      [userId]
     );
 
-    if (all.length > 5) {
-        const toDelete = all.slice(5).map(row => row.id);
+    if (all.length > 4) {
+        const toDelete = all.slice(4).map(row => row.id);
+        const placeholders = toDelete.map(() => '?').join(', ');
+        await queryAsync(
+        `DELETE FROM user_password WHERE id IN (${placeholders})`,
+        toDelete
+        );
+    }
+
+    // Remove senhas antigas temporárias (mantém no máximo 5 contando com a válida)
+    const [allTemp] = await queryAsync(
+      `SELECT id FROM user_password
+       WHERE user_id = ?
+         AND is_temp = TRUE
+         AND status IN ('expired', 'blocked')
+       ORDER BY created_at DESC`,
+      [userId]
+    );
+
+    if (allTemp.length > 4) {
+        const toDelete = allTemp.slice(4).map(row => row.id);
         const placeholders = toDelete.map(() => '?').join(', ');
         await queryAsync(
         `DELETE FROM user_password WHERE id IN (${placeholders})`,
@@ -231,24 +282,25 @@ const setPassword = async (email, newPassword, currentPassword = null) => {
 
 const resetPassword = async (email) => {
   // Verifica se o usuário existe
-  const [users] = await queryAsync("SELECT * FROM user WHERE email = ?", [email]);
+  const [users] = await queryAsync("SELECT id, name, email FROM user WHERE email = ? AND is_active = TRUE", [email]);
   const user = users[0];
   if (!user) {
     // Retorna resposta genérica (para evitar enumeração de e-mails)
     return { message: "Se o e-mail estiver cadastrado, você receberá uma senha temporária." };
   }
+  const userId = user.id;
 
   // Gera senha temporária
   const tempPassword = generateTemporaryPassword(10); // Ex: 10 caracteres
   const hash = await bcrypt.hash(tempPassword, 10);
   const id = uuidv4();
 
-  // Expira senhas temporárias anteriores
+  // Bloqueia senhas anteriores (temporárias ou permanentes)
   await queryAsync(
     `UPDATE user_password
-     SET status = 'expired'
-     WHERE user_id = ? AND is_temp = true AND status = 'valid'`,
-    [user.id]
+    SET status = 'blocked'
+    WHERE user_id = ? AND status = 'valid'`,
+    [userId]
   );
 
   // Cria nova senha temporária
@@ -259,7 +311,7 @@ const resetPassword = async (email) => {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
-      user.id,
+      userId,
       hash,
       true,              // is_temp
       0,                 // attempts
@@ -269,6 +321,44 @@ const resetPassword = async (email) => {
       new Date(Date.now() + 30 * 60 * 1000) // 30 minutos
     ]
   );
+
+  // Remove senhas antigas permanentes (mantém no máximo 5 contando com a válida)
+  const [all] = await queryAsync(
+    `SELECT id FROM user_password
+      WHERE user_id = ?
+        AND is_temp = FALSE
+        AND status IN ('expired', 'blocked')
+      ORDER BY created_at DESC`,
+    [userId]
+  );
+
+  if (all.length > 4) {
+      const toDelete = all.slice(4).map(row => row.id);
+      const placeholders = toDelete.map(() => '?').join(', ');
+      await queryAsync(
+      `DELETE FROM user_password WHERE id IN (${placeholders})`,
+      toDelete
+      );
+  }
+
+  // Remove senhas antigas temporárias (mantém no máximo 5 contando com a válida)
+  const [allTemp] = await queryAsync(
+    `SELECT id FROM user_password
+      WHERE user_id = ?
+        AND is_temp = TRUE
+        AND status IN ('expired', 'blocked')
+      ORDER BY created_at DESC`,
+    [userId]
+  );
+
+  if (allTemp.length > 4) {
+      const toDelete = allTemp.slice(4).map(row => row.id);
+      const placeholders = toDelete.map(() => '?').join(', ');
+      await queryAsync(
+      `DELETE FROM user_password WHERE id IN (${placeholders})`,
+      toDelete
+      );
+  }
 
   // Envia por e-mail
   await sendEmail({
