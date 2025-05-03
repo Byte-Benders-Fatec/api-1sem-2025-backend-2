@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { queryAsync } = require('../configs/db');
 const { sendEmail } = require('../utils/sendEmail');
+const { verifyPassword } = require('./userPassword.service'); 
 
 const validTypes = ['login', 'password_reset', 'password_change', 'critical_action'];
 
@@ -56,7 +57,7 @@ const pruneOldTwoFaCodes = async (userId, type) => {
 };
 
 // Cria novo código 2FA com controle de tipo e limpeza prévia
-const createTwoFaCode = async (userId, type = 'login') => {
+const createTwoFaCode = async (userId, type = 'login', minutos = 10) => {
   try {
     await pruneOldTwoFaCodes(userId, type); // Limpa antes de criar
 
@@ -68,7 +69,7 @@ const createTwoFaCode = async (userId, type = 'login') => {
     const maxAttempts = 5;
     const status = 'pending';
     const createdAt = new Date();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+    const expiresAt = new Date(Date.now() + minutos * 60 * 1000); // default 10 minutos
 
     const sql = `
       INSERT INTO two_fa_code (
@@ -138,29 +139,33 @@ const login = async (email, password) => {
   }
 
   // Busca o usuário pelo e-mail
-  const [users] = await queryAsync('SELECT * FROM user WHERE email = ?', [email]);
+  const [users] = await queryAsync('SELECT * FROM user WHERE email = ? AND is_active = TRUE', [email]);
   const user = users[0];
 
   if (!user) {
     throw new Error('Credenciais inválidas');
   }
 
+  // Será removido em breve... 
+
   // Busca a senha válida e permanente do usuário
-  const [passwordRows] = await queryAsync(`
-    SELECT * FROM user_password
-    WHERE user_id = ? AND is_temp = false AND status = 'valid'
-    ORDER BY created_at DESC LIMIT 1
-  `, [user.id]);
+  // const [passwordRows] = await queryAsync(`
+  //   SELECT * FROM user_password
+  //   WHERE user_id = ? AND is_temp = false AND status = 'valid'
+  //   ORDER BY created_at DESC LIMIT 1
+  // `, [user.id]);
 
-  const userPassword = passwordRows[0];
+  // const userPassword = passwordRows[0];
   
-  if (!userPassword || !(await bcrypt.compare(password, userPassword.password_hash))) {
-    throw new Error('Credenciais inválidas');
-  }
+  // if (!userPassword || !(await bcrypt.compare(password, userPassword.password_hash))) {
+  //   throw new Error('Credenciais inválidas');
+  // }
 
-  if (!user.is_active) {
-    throw new Error('Usuário inativo, não possui acesso');
-  }
+  // if (!user.is_active) {
+  //   throw new Error('Usuário inativo, não possui acesso');
+  // }
+
+  await verifyPassword(email, password);
 
   const [roles] = await queryAsync('SELECT * FROM system_role WHERE id = ?', [user.system_role_id]);
   const system_role = roles[0];
