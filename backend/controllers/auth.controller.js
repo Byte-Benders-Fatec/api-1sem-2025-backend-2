@@ -1,4 +1,5 @@
 const authService = require('../services/auth.service');
+const userPasswordService = require('../services/userPassword.service');
 
 const AuthController = {
   login: async (req, res) => {
@@ -32,6 +33,27 @@ const AuthController = {
     } catch (err) {
       return res.status(400).json({
         error: "Erro ao verificar o código", details: err.message
+      });
+    }
+  },
+
+  resetPassword: async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Erro ao solicitar recuperação de senha",
+        details: "E-mail é obrigatório"
+      });
+    }
+
+    try {
+      const result = await userPasswordService.resetPassword(email);
+      return res.status(200).json(result);
+    } catch (err) {
+      return res.status(500).json({
+        error: "Erro ao solicitar recuperação de senha",
+        details: err.message
       });
     }
   },

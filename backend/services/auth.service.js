@@ -142,7 +142,7 @@ const login = async (email, password) => {
   const user = users[0];
 
   if (!user) {
-    throw new Error('Credenciais inválidas 1');
+    throw new Error('Credenciais inválidas');
   }
 
   // Busca a senha válida e permanente do usuário
@@ -155,7 +155,7 @@ const login = async (email, password) => {
   const userPassword = passwordRows[0];
   
   if (!userPassword || !(await bcrypt.compare(password, userPassword.password_hash))) {
-    throw new Error('Credenciais inválidas 2');
+    throw new Error('Credenciais inválidas');
   }
 
   if (!user.is_active) {

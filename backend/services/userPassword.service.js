@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcrypt');
 const { queryAsync } = require('../configs/db');
+const { generateTemporaryPassword } = require("../utils/generateTemporaryPassword");
 const { sendEmail } = require('../utils/sendEmail');
 
 const validStatuses = ['valid', 'expired', 'blocked'];
@@ -227,9 +228,61 @@ const setPassword = async (email, newPassword, currentPassword = null) => {
     throw error;
   }
 };
-  
+
+const resetPassword = async (email) => {
+  // Verifica se o usuário existe
+  const [users] = await queryAsync("SELECT * FROM user WHERE email = ?", [email]);
+  const user = users[0];
+  if (!user) {
+    // Retorna resposta genérica (para evitar enumeração de e-mails)
+    return { message: "Se o e-mail estiver cadastrado, você receberá uma senha temporária." };
+  }
+
+  // Gera senha temporária
+  const tempPassword = generateTemporaryPassword(10); // Ex: 10 caracteres
+  const hash = await bcrypt.hash(tempPassword, 10);
+  const id = uuidv4();
+
+  // Expira senhas temporárias anteriores
+  await queryAsync(
+    `UPDATE user_password
+     SET status = 'expired'
+     WHERE user_id = ? AND is_temp = true AND status = 'valid'`,
+    [user.id]
+  );
+
+  // Cria nova senha temporária
+  await queryAsync(
+    `INSERT INTO user_password (
+      id, user_id, password_hash, is_temp, attempts, max_attempts, locked_until,
+      status, expires_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      user.id,
+      hash,
+      true,              // is_temp
+      0,                 // attempts
+      5,                 // max_attempts
+      null,              // locked_until
+      "valid",           // status
+      new Date(Date.now() + 30 * 60 * 1000) // 30 minutos
+    ]
+  );
+
+  // Envia por e-mail
+  await sendEmail({
+    to: user.email,
+    subject: "Recuperação de Acesso",
+    text: `Você solicitou a recuperação de acesso.\n\nSua senha temporária é: ${tempPassword}\n\nEla é válida por 30 minutos. Após o login, será solicitado que você crie uma nova senha.`
+  });
+
+  return { message: "Se o e-mail estiver cadastrado, você receberá uma senha temporária." };
+};
+
 module.exports = {
     validatePassword,
     verifyPassword,
     setPassword,
+    resetPassword,
 };
