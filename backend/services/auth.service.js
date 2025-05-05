@@ -5,12 +5,19 @@ const jwt = require('jsonwebtoken');
 const { queryAsync } = require('../configs/db');
 const { sendEmail } = require('../utils/sendEmail');
 const { verifyPassword } = require('./userPassword.service'); 
+const { create } = require('domain');
 
 const validTypes = ['login', 'password_reset', 'password_change', 'critical_action'];
 
-// Geração segura do código de 6 dígitos com crypto
-function generateVerificationCode() {
-  return crypto.randomInt(100000, 1000000).toString(); // 6 dígitos
+// Geração segura do código de 6 ou 12 dígitos com crypto
+function generateVerificationCode(double = false) {
+  const codePart1 = crypto.randomInt(100000, 1000000).toString(); // 6 dígitos
+  let codePart2 = null;
+  if (double) {
+    codePart2 = crypto.randomInt(100000, 1000000).toString(); // 6 dígitos
+  }
+  const code = double ? codePart1 + codePart2 : codePart1;
+  return {code, part1: codePart1, part2: codePart2}
 }
 
 // Remove códigos antigos, mantendo no máximo 5 por tipo
@@ -57,49 +64,104 @@ const pruneOldTwoFaCodes = async (userId, type) => {
 };
 
 // Cria novo código 2FA com controle de tipo e limpeza prévia
-const createTwoFaCode = async (userId, type = 'login', minutos = 10) => {
+const createTwoFaCode = async (user, type = 'login', minutes = 10) => {
   try {
-    await pruneOldTwoFaCodes(userId, type); // Limpa antes de criar
+    const userId = user.id;
+    await pruneOldTwoFaCodes(userId, type); // Limpa os antigos
 
-    const code = generateVerificationCode();
-    const code_hash = await bcrypt.hash(code, 10);
+    // Validação de tipo
+    if (!validTypes.includes(type)) {
+      throw new Error(`Tipo de código 2FA inválido. Tipos permitidos: ${validTypes.join(', ')}`);
+    }
+
+    // Variável de ambiente define se token será criado
+    const useToken = process.env.TWO_FA_WITH_TOKEN === 'true';
+
+    const { code, part1, part2 } = generateVerificationCode(useToken); // Gera código simples ou duplo
+     const code_hash = await bcrypt.hash(code, 10);
+    // const code_hash = code;
 
     const id = uuidv4();
     const attempts = 0;
     const maxAttempts = 5;
     const status = 'pending';
     const createdAt = new Date();
-    const expiresAt = new Date(Date.now() + minutos * 60 * 1000); // default 10 minutos
+    const expiresAt = new Date(Date.now() + minutes * 60 * 1000);
+    const formattedExpiration = expiresAt.toLocaleString('pt-BR');
 
     const sql = `
       INSERT INTO two_fa_code (
-        id, user_id, code_hash, attempts, max_attempts, status, created_at, expires_at, type
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, user_id, code_hash, is_double, attempts, max_attempts, status, created_at, expires_at, type
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-
-    const values = [id, userId, code_hash, attempts, maxAttempts, status, createdAt, expiresAt, type];
+    const values = [id, userId, code_hash, useToken, attempts, maxAttempts, status, createdAt, expiresAt, type];
     await queryAsync(sql, values);
 
-    return { code, expiresAt };
+    // Criação do token com parte2 (caso código duplo)
+    let twoFaToken = null;
+    if (useToken) {
+      const seconds = minutes * 60;
+      twoFaToken = jwt.sign(
+        { code: part2, type },
+        process.env.JWT_SECRET,
+        { expiresIn: seconds }
+      );
+    }
+
+    // Envio do e-mail
+    const disable2FA = process.env.SKIP_2FA === 'true';
+    if (!disable2FA) {
+      const subjectMap = {
+        login: 'Código de acesso ao sistema',
+        password_reset: 'Recuperação de senha',
+        password_change: 'Confirmação de alteração de senha',
+        critical_action: 'Confirmação de ação crítica'
+      };
+
+      const bodyMap = {
+        login: `Use o código abaixo para fazer login no sistema.\n\nCódigo: ${part1}\nVálido até: ${formattedExpiration}`,
+        password_reset: `Recebemos uma solicitação de recuperação de senha.\n\nCódigo: ${part1}\nVálido até: ${formattedExpiration}`,
+        password_change: `Você solicitou a alteração de sua senha.\n\nCódigo: ${part1}\nVálido até: ${formattedExpiration}`,
+        critical_action: `Confirme a ação crítica com o código abaixo.\n\nCódigo: ${part1}\nVálido até: ${formattedExpiration}`
+      };
+
+      await sendEmail({
+        to: user.email,
+        subject: subjectMap[type] || 'Código de verificação',
+        text: bodyMap[type] || `Código: ${part1}\nVálido até: ${formattedExpiration}`
+      });
+    }
+
+    return { code, part1, part2, token: twoFaToken };
   } catch (error) {
     throw new Error('Falha ao gerar o código de verificação: ' + error.message);
   }
 };
 
-const verifyTwoFaCode = async (email, code) => {
-  if (!email || !code) throw new Error('E-mail e código são obrigatórios');
+const verifyTwoFaCode = async (email, submittedCode, tokenCode = null, type = 'login') => {
+  if (!email || !submittedCode) throw new Error('E-mail e código são obrigatórios');
 
-  const [users] = await queryAsync('SELECT * FROM user WHERE email = ?', [email]);
+  // Validação de tipo
+  if (!validTypes.includes(type)) {
+    throw new Error(`Tipo de verificação inválido. Tipos permitidos: ${validTypes.join(', ')}`);
+  }
+
+  // Busca usuário ativo
+  const [users] = await queryAsync('SELECT * FROM user WHERE email = ? AND is_active = TRUE', [email]);
   const user = users[0];
-  if (!user) throw new Error('Usuário não encontrado');
+  if (!user) throw new Error('Usuário não encontrado ou inativo');
 
+  // Busca o código mais recente pendente do tipo correto
   const [codes] = await queryAsync(
-    `SELECT * FROM two_fa_code WHERE user_id = ? AND status = 'pending' AND type = 'login' ORDER BY created_at DESC`,
-    [user.id]
+    `SELECT * FROM two_fa_code 
+     WHERE user_id = ? AND type = ? AND status = 'pending'
+     ORDER BY created_at DESC`,
+    [user.id, type]
   );
   const codeCheck = codes[0];
   if (!codeCheck) throw new Error('Código não encontrado ou já utilizado');
 
+  // Verifica expiração ou excesso de tentativas
   const isExpired = new Date(codeCheck.expires_at) < new Date();
   const tooManyAttempts = codeCheck.attempts >= codeCheck.max_attempts;
   if (isExpired || tooManyAttempts) {
@@ -107,18 +169,47 @@ const verifyTwoFaCode = async (email, code) => {
     throw new Error('Código expirado ou número máximo de tentativas atingido');
   }
 
-  const isMatch = await bcrypt.compare(code, codeCheck.code_hash);
-  if (!isMatch) {
-    await queryAsync(`UPDATE two_fa_code SET attempts = attempts + 1 WHERE id = ?`, [codeCheck.id]);
-    throw new Error('Código incorreto');
+  // Verificação com ou sem token
+  if (codeCheck.is_double) {
+    if (!tokenCode) {
+      // Conta como tentativa inválida
+      await queryAsync(`UPDATE two_fa_code SET attempts = attempts + 1 WHERE id = ?`, [codeCheck.id]);
+      throw new Error('Token de verificação ausente para código duplo');
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(tokenCode, process.env.JWT_SECRET);
+      if (decoded.type !== type) {
+        await queryAsync(`UPDATE two_fa_code SET attempts = attempts + 1 WHERE id = ?`, [codeCheck.id]);
+        throw new Error('Token inválido para este tipo de verificação');
+      }
+    } catch (err) {
+      await queryAsync(`UPDATE two_fa_code SET attempts = attempts + 1 WHERE id = ?`, [codeCheck.id]);
+      throw new Error('Token inválido ou expirado');
+    }
+
+    const fullCode = submittedCode + decoded.code;
+    const isMatch = await bcrypt.compare(fullCode, codeCheck.code_hash);
+    if (!isMatch) {
+      await queryAsync(`UPDATE two_fa_code SET attempts = attempts + 1 WHERE id = ?`, [codeCheck.id]);
+      throw new Error('Código incorreto');
+    }
+  } else {
+    const isMatch = await bcrypt.compare(submittedCode, codeCheck.code_hash);
+    if (!isMatch) {
+      await queryAsync(`UPDATE two_fa_code SET attempts = attempts + 1 WHERE id = ?`, [codeCheck.id]);
+      throw new Error('Código incorreto');
+    }
   }
 
+  // Marca como verificado
   await queryAsync(`UPDATE two_fa_code SET status = 'verified' WHERE id = ?`, [codeCheck.id]);
 
-  const [roles] = await queryAsync('SELECT * FROM system_role WHERE id = ?', [user.system_role_id]);
-  const system_role = roles[0];
-  if (!system_role) throw new Error('O usuário não possui papel de sistema atribuído');
+  return { success: true, user };
+};
 
+const funcao = async () => {
   const accessToken = jwt.sign(
     {
       id: user.id,
@@ -131,7 +222,7 @@ const verifyTwoFaCode = async (email, code) => {
   );
 
   return { token: accessToken };
-};
+}
 
 const login = async (email, password) => {
   if (!email || !password) {
@@ -175,16 +266,9 @@ const login = async (email, password) => {
   }
 
   // Geração e envio do código 2FA
-  const { code } = await createTwoFaCode(user.id, 'login');
-
+  const { part1, token } = await createTwoFaCode(user, 'login', 120);
+  const code = part1
   const disable2FA = process.env.SKIP_2FA === 'true';
-  if (!disable2FA) {
-    await sendEmail({
-      to: user.email,
-      subject: 'Seu código de acesso',
-      text: `Seu código de verificação é: ${code}`
-    });
-  }
 
   const loginToken = jwt.sign(
     { email: user.email, scope: 'verify' },
@@ -192,10 +276,42 @@ const login = async (email, password) => {
     { expiresIn: '10m' }
   );
 
+  console.log('Código 2FA gerado:', code);
+  console.log('Token de login gerado:', loginToken);
+  console.log('Token 2FA gerado:', token);
+
   return {
     login_token: loginToken,
+    ...(token ? { twofa_login_token: token } : {}),
     ...(disable2FA ? { code } : {})
   };
+};
+
+const finalizeLogin = async (email, submittedCode, tokenCode = null, type = 'login') => {
+  const verification = await verifyTwoFaCode(email, submittedCode, tokenCode, type);
+
+  if (!verification.success || !verification.user) {
+    throw new Error('Verificação falhou');
+  }
+
+  const user = verification.user;
+
+  const [roles] = await queryAsync('SELECT * FROM system_role WHERE id = ?', [user.system_role_id]);
+  const system_role = roles[0];
+  if (!system_role) throw new Error('O usuário não possui papel de sistema atribuído');
+
+  const accessToken = jwt.sign(
+    {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      system_role: system_role.name
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '1h' }
+  );
+
+  return { token: accessToken };
 };
 
 module.exports = {
@@ -203,4 +319,5 @@ module.exports = {
   createTwoFaCode,
   verifyTwoFaCode,
   login,
+  finalizeLogin,
 };

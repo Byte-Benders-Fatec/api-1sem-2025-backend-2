@@ -19,24 +19,55 @@ const AuthController = {
   },
 
   checkCode: async (req, res) => {
-    const { email, code } = req.body;
-
+    const { email, code, type = 'login' } = req.body;
+  
     if (email !== req.userEmail) {
       return res.status(403).json({
-        error: "Erro ao verificar o código", details: 'O e-mail fornecido não corresponde ao token' 
+        error: "Erro ao verificar o código",
+        details: "O e-mail fornecido não corresponde ao token"
       });
     }
-
+  
     try {
-      const result = await authService.verifyTwoFaCode(email, code);
+      // Identifica dinamicamente o token correto conforme o tipo
+      const tokenKey = `twofa_${type}_token`;
+      const token = req.body[tokenKey];
+  
+      const result = await authService.verifyTwoFaCode(email, code, token, type);
       return res.status(200).json(result);
     } catch (err) {
       return res.status(400).json({
-        error: "Erro ao verificar o código", details: err.message
+        error: "Erro ao verificar o código",
+        details: err.message
       });
     }
   },
 
+  finalizeLogin: async (req, res) => {
+    const { email, code, type = 'login' } = req.body;
+  
+    if (email !== req.userEmail) {
+      return res.status(403).json({
+        error: "Erro ao finalizar login",
+        details: "O e-mail fornecido não corresponde ao token"
+      });
+    }
+  
+    try {
+      // Identifica dinamicamente o token correto conforme o tipo
+      const tokenKey = `twofa_${type}_token`;
+      const token = req.body[tokenKey];
+  
+      const result = await authService.finalizeLogin(email, code, token, type);
+      return res.status(200).json(result);
+    } catch (err) {
+      return res.status(400).json({
+        error: "Erro ao finalizar login",
+        details: err.message
+      });
+    }
+  },
+  
   resetPassword: async (req, res) => {
     const { email } = req.body;
 
