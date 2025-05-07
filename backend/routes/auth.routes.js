@@ -12,7 +12,8 @@ const verifyCodeLimiter = createRateLimiter(
 router.post('/login', AuthController.login);
 router.post('/verify-code', verifyCodeLimiter, verifyTokenScope('verify'), AuthController.checkCode);
 router.post('/finalize-login', verifyCodeLimiter, verifyTokenScope('verify'), AuthController.finalizeLogin);
-router.post('/reset-password', AuthController.resetPassword);
+router.post('/start-reset-password', verifyCodeLimiter, AuthController.startResetPassword);
+router.post('/reset-password', verifyCodeLimiter, AuthController.resetPassword);
 router.get('/validate', authMiddleware, AuthController.validate);
 router.get('/me', authMiddleware, AuthController.me);
 
