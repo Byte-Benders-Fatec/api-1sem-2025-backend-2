@@ -36,15 +36,13 @@ const getById = async (req, res) => {
 
 const create = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, system_role_id } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: "Nome, e-mail e senha são obrigatórios" });
+    if (!name || !email) {
+      return res.status(400).json({ error: "Nome e e-mail são obrigatórios" });
     }
 
-    const password_hash = await bcrypt.hash(password, 10); // gera o hash seguro da senha
-
-    const result = await userService.create({ name, email, password_hash });
+    const result = await userService.create({ name, email, system_role_id });
     res.status(201).json(result);
   } catch (err) {
     res.status(500).json({ error: "Erro ao criar usuário" });
@@ -53,13 +51,9 @@ const create = async (req, res) => {
 
 const update = async (req, res) => {
   const id = req.params.id;
-  const { name, email, password, is_active, system_role_id } = req.body;
+  const { name, email, is_active, system_role_id } = req.body;
 
   const updatedFields = { name, email, is_active, system_role_id };
-
-  if (password) {
-    updatedFields.password_hash = await bcrypt.hash(password, 10); // gera o hash seguro da senha
-  }
   
   const result = await userService.update(id, updatedFields);
 
