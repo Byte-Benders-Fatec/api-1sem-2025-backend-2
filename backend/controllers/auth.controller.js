@@ -68,7 +68,7 @@ const AuthController = {
     }
   },
   
-  resetPassword: async (req, res) => {
+  startResetPassword: async (req, res) => {
     const { email } = req.body;
 
     if (!email) {
@@ -79,7 +79,40 @@ const AuthController = {
     }
 
     try {
-      const result = await userPasswordService.resetPassword(email);
+      const result = await authService.startResetPassword(email);
+      return res.status(200).json(result);
+    } catch (err) {
+      return res.status(500).json({
+        error: "Erro ao solicitar recuperação de senha",
+        details: err.message
+      });
+    }
+  },
+
+  resetPassword: async (req, res) => {
+    const { email, code, type = 'password_reset' } = req.body;
+
+    if (!email && !code) {
+      return res.status(400).json({
+        error: "Erro ao solicitar recuperação de senha",
+        details: "E-mail e código são obrigatórios"
+      });
+    }
+    if (!email) {
+      return res.status(400).json({
+        error: "Erro ao solicitar recuperação de senha",
+        details: "E-mail é obrigatório"
+      });
+    }
+    if (!code) {
+      return res.status(400).json({
+        error: "Erro ao solicitar recuperação de senha",
+        details: "Código é obrigatório"
+      });
+    }
+
+    try {
+      const result = await authService.finalizeResetPassword(email, code, type);
       return res.status(200).json(result);
     } catch (err) {
       return res.status(500).json({
