@@ -4,8 +4,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { queryAsync } = require('../configs/db');
 const { sendEmail } = require('../utils/sendEmail');
-const { verifyPassword } = require('./userPassword.service'); 
-const { create } = require('domain');
+const { verifyPassword, resetPassword } = require('./userPassword.service'); 
 
 const validTypes = ['login', 'password_reset', 'password_change', 'critical_action'];
 
@@ -75,11 +74,11 @@ const createTwoFaCode = async (user, type = 'login', minutes = 10) => {
     }
 
     // Variável de ambiente define se token será criado
-    const useToken = process.env.TWO_FA_WITH_TOKEN === 'true';
+    // Só usa token em tipos que não são públicos (evita enumeração no reset-password)
+    const useToken = process.env.TWO_FA_WITH_TOKEN === 'true' && type !== 'password_reset';
 
     const { code, part1, part2 } = generateVerificationCode(useToken); // Gera código simples ou duplo
-     const code_hash = await bcrypt.hash(code, 10);
-    // const code_hash = code;
+    const code_hash = await bcrypt.hash(code, 10);
 
     const id = uuidv4();
     const attempts = 0;
@@ -209,21 +208,6 @@ const verifyTwoFaCode = async (email, submittedCode, tokenCode = null, type = 'l
   return { success: true, user };
 };
 
-const funcao = async () => {
-  const accessToken = jwt.sign(
-    {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      system_role: system_role.name
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: '1h' }
-  );
-
-  return { token: accessToken };
-}
-
 const login = async (email, password) => {
   if (!email || !password) {
     throw new Error('Email e senha são obrigatórios');
@@ -237,25 +221,6 @@ const login = async (email, password) => {
     throw new Error('Credenciais inválidas');
   }
 
-  // Será removido em breve... 
-
-  // Busca a senha válida e permanente do usuário
-  // const [passwordRows] = await queryAsync(`
-  //   SELECT * FROM user_password
-  //   WHERE user_id = ? AND is_temp = false AND status = 'valid'
-  //   ORDER BY created_at DESC LIMIT 1
-  // `, [user.id]);
-
-  // const userPassword = passwordRows[0];
-  
-  // if (!userPassword || !(await bcrypt.compare(password, userPassword.password_hash))) {
-  //   throw new Error('Credenciais inválidas');
-  // }
-
-  // if (!user.is_active) {
-  //   throw new Error('Usuário inativo, não possui acesso');
-  // }
-
   await verifyPassword(email, password);
 
   const [roles] = await queryAsync('SELECT * FROM system_role WHERE id = ?', [user.system_role_id]);
@@ -266,7 +231,7 @@ const login = async (email, password) => {
   }
 
   // Geração e envio do código 2FA
-  const { part1, token } = await createTwoFaCode(user, 'login', 120);
+  const { part1, token } = await createTwoFaCode(user, 'login', 15);
   const code = part1
   const disable2FA = process.env.SKIP_2FA === 'true';
 
@@ -275,10 +240,6 @@ const login = async (email, password) => {
     process.env.JWT_SECRET,
     { expiresIn: '10m' }
   );
-
-  console.log('Código 2FA gerado:', code);
-  console.log('Token de login gerado:', loginToken);
-  console.log('Token 2FA gerado:', token);
 
   return {
     login_token: loginToken,
@@ -314,10 +275,61 @@ const finalizeLogin = async (email, submittedCode, tokenCode = null, type = 'log
   return { token: accessToken };
 };
 
+const startResetPassword = async (email) => {
+  if (!email) {
+    throw new Error('E-mail é obrigatório');
+  }
+
+  // Busca o usuário pelo e-mail
+  const [users] = await queryAsync('SELECT * FROM user WHERE email = ? AND is_active = TRUE', [email]);
+  const user = users[0];
+
+  if (!user) {
+    return { success: true };
+  }
+
+  // Verifica se o usuário tem papel de sistema
+  const [roles] = await queryAsync('SELECT * FROM system_role WHERE id = ?', [user.system_role_id]);
+  const system_role = roles[0];
+
+  if (!system_role) {
+    return { success: true };
+  }
+
+  // Geração e envio do código 2FA
+  const { code } = await createTwoFaCode(user, 'password_reset', 15);
+  const disable2FA = process.env.SKIP_2FA === 'true';
+
+  return {
+    success: true,
+    ...(disable2FA ? { code } : {})
+  };
+};
+
+const finalizeResetPassword = async (email, submittedCode, type = 'password_reset') => {
+  const verification = await verifyTwoFaCode(email, submittedCode, null, type);
+
+  if (!verification.success || !verification.user) {
+    throw new Error('Verificação falhou');
+  }
+
+  const user = verification.user;
+
+  const [roles] = await queryAsync('SELECT * FROM system_role WHERE id = ?', [user.system_role_id]);
+  const system_role = roles[0];
+  if (!system_role) throw new Error('O usuário não possui papel de sistema atribuído');
+
+  const result = await resetPassword(email);
+
+  return { result };
+};
+
 module.exports = {
   pruneOldTwoFaCodes,
   createTwoFaCode,
   verifyTwoFaCode,
   login,
   finalizeLogin,
+  startResetPassword,
+  finalizeResetPassword,
 };
