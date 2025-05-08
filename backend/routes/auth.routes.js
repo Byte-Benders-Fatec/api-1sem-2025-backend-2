@@ -4,8 +4,8 @@ const AuthController = require('../controllers/auth.controller');
 const {authMiddleware, verifyTokenScope, createRateLimiter} = require('../middlewares/auth.middleware');
 
 const verifyCodeLimiter = createRateLimiter(
-    5,
-    500,
+    500, // Atenção: O valor 500 é apenas um ajuste para desenvolvimento e teste. Ajustar posteriormente.
+    10,
     'Muitas tentativas de verificação. Tente novamente em 10 minutos.'
 );
 
