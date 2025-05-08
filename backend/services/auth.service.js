@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { queryAsync } = require('../configs/db');
 const { sendEmail } = require('../utils/sendEmail');
-const { verifyPassword, resetPassword } = require('./userPassword.service'); 
+const { verifyPassword, resetPassword, checkPasswordSetup, setPassword } = require('./userPassword.service'); 
 
 const validTypes = ['login', 'password_reset', 'password_change', 'critical_action'];
 
@@ -324,6 +324,33 @@ const finalizeResetPassword = async (email, submittedCode, type = 'password_rese
   return { result };
 };
 
+const startChangePassword = async (email, newPassword, currentPassword) => {
+
+  const { success, user } = await checkPasswordSetup(email, newPassword, currentPassword);
+
+  // Geração e envio do código 2FA
+  const { part1, token } = await createTwoFaCode(user, 'password_change', 15);
+  const code = part1
+  const disable2FA = process.env.SKIP_2FA === 'true';
+
+  return {
+    success,
+    ...(token ? { twofa_password_change_token: token } : {}),
+    ...(disable2FA ? { code } : {})
+  };
+};
+
+const finalizeChangePassword = async (email, newPassword, currentPassword, submittedCode, tokenCode = null, type = 'password_change') => {
+
+  const verification = await verifyTwoFaCode(email, submittedCode, tokenCode, type);
+  if (!verification.success || !verification.user) {
+    throw new Error('Verificação falhou');
+  }
+
+  const result = await setPassword(email, newPassword, currentPassword);
+  return { result };
+};
+
 module.exports = {
   pruneOldTwoFaCodes,
   createTwoFaCode,
@@ -332,4 +359,6 @@ module.exports = {
   finalizeLogin,
   startResetPassword,
   finalizeResetPassword,
+  startChangePassword,
+  finalizeChangePassword,
 };

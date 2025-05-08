@@ -122,6 +122,48 @@ const AuthController = {
     }
   },
 
+  startChangePassword: async (req, res) => {
+    const { email, new_password, current_password } = req.body;
+  
+    if (!email || !new_password || !current_password) {
+      return res.status(400).json({
+        error: "Erro ao solicitar alteração de senha",
+        details: "E-mail, senha atual e nova senha são obrigatórios"
+      });
+    }
+  
+    try {
+      const result = await authService.startChangePassword(email, new_password, current_password);
+      return res.status(200).json(result);
+    } catch (err) {
+      return res.status(400).json({
+        error: "Erro ao solicitar alteração de senha",
+        details: err.message
+      });
+    }
+  },
+
+  ChangePassword: async (req, res) => {
+    const { email, new_password, current_password, code, twofa_password_change_token = null, type = 'password_change' } = req.body;
+  
+    if (!email || !new_password || !current_password || !code) {
+      return res.status(400).json({
+        error: "Erro na alteração de senha",
+        details: "E-mail, senha atual, nova senha e código são obrigatórios"
+      });
+    }
+  
+    try {
+      const result = await authService.finalizeChangePassword(email, new_password, current_password, code, twofa_password_change_token, type);
+      return res.status(200).json(result);
+    } catch (err) {
+      return res.status(400).json({
+        error: "Erro na alteração de senha",
+        details: err.message
+      });
+    }
+  },
+
   validate: async (req, res) => {
     return res.status(200).json({ valid: true, user: req.user });
   },

@@ -170,11 +170,11 @@ const verifyTemporaryPassword = async (user, current, inputPassword) => {
     throw new Error("Senha temporária incorreta.");
   }
 
-  // Sucesso: marca como expirada (uso único)
-  await queryAsync(
-    `UPDATE user_password SET status = 'expired' WHERE id = ?`,
-    [current.id]
-  );
+  // Sucesso: marca como expirada (uso único) - Desabilitado
+  // await queryAsync(
+  //   `UPDATE user_password SET status = 'expired' WHERE id = ?`,
+  //   [current.id]
+  // );
 
   return true;
 };
@@ -220,36 +220,50 @@ const verifyPassword = async (email, inputPassword) => {
   }
 };
 
+const checkPasswordSetup = async (email, newPassword, currentPassword = null) => {
+  // Verifica se o usuário existe e está ativo
+  const [userCheck] = await queryAsync(
+    'SELECT id, name, email FROM user WHERE email = ? AND is_active = TRUE',
+    [email]
+  );
+  const user = userCheck[0];
+  if (!user) throw new Error("Usuário não encontrado.");
+
+  const userId = user.id;
+
+  // Verifica se a nova senha é válida (critérios de segurança)
+  validatePassword(newPassword);
+
+  // Verifica a senha atual, se fornecida
+  if (currentPassword) {
+    await verifyPassword(email, currentPassword);
+  }
+
+  // Verifica se a nova senha já foi usada anteriormente
+  const [previousPasswords] = await queryAsync(
+    `SELECT password_hash FROM user_password
+     WHERE user_id = ? AND is_temp = false`,
+    [userId]
+  );
+
+  for (const row of previousPasswords) {
+    const reused = await bcrypt.compare(newPassword, row.password_hash);
+    if (reused) {
+      throw new Error('Esta senha já foi usada anteriormente. Escolha outra.');
+    }
+  }
+  
+  return {
+    success: true,
+    user
+  };
+};
+
 const setPassword = async (email, newPassword, currentPassword = null) => {
   try {
 
-    // Verifica se o usuário existe
-    const [userCheck] = await queryAsync('SELECT id, name, email FROM user WHERE email = ? AND is_active = TRUE', [email]);
-    const user = userCheck[0];
-    if (!user) throw new Error("Usuário não encontrado.");
+    const { user } = await checkPasswordSetup(email, newPassword, currentPassword);
     const userId = user.id;
-
-    // Verifica se a nova senha é válida
-    validatePassword(newPassword);
-
-    // Se a senha atual for fornecida, verifica se está correta
-    if (currentPassword) {
-        await verifyPassword(email, currentPassword);
-    }
-    
-    // Verifica se a nova senha já foi usada
-    const [previousPasswords] = await queryAsync(
-        `SELECT password_hash FROM user_password
-        WHERE user_id = ? AND is_temp = false`,
-        [userId]
-    );
-
-    for (const row of previousPasswords) {
-        const reused = await bcrypt.compare(newPassword, row.password_hash);
-        if (reused) {
-        throw new Error('Esta senha já foi usada anteriormente. Escolha outra.');
-        }
-    }
 
     // Bloqueia senhas anteriores (temporárias ou permanentes)
     await queryAsync(
@@ -417,6 +431,7 @@ const resetPassword = async (email) => {
 module.exports = {
     validatePassword,
     verifyPassword,
+    checkPasswordSetup,
     setPassword,
     resetPassword,
 };
