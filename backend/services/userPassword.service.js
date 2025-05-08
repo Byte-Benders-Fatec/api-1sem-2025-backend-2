@@ -332,6 +332,26 @@ const setPassword = async (email, newPassword, currentPassword = null) => {
         );
     }
 
+    // await sendEmail({
+    //   to: user.email,
+    //   subject: '...',
+    //   text: `...`
+    // });
+
+    await sendEmail({
+      to: user.email,
+      subject: 'Senha atualizada com sucesso',
+      text: `Olá ${user.name},
+    
+    Sua senha foi alterada com sucesso em ${new Date().toLocaleString('pt-BR')}.
+    Se você não reconhece essa alteração, recomendamos que acesse o sistema e altere sua senha imediatamente.
+    
+    Em caso de dúvidas, entre em contato com o suporte.
+    
+    Atenciosamente,
+    Equipe de Segurança do Sistema`
+    });
+    
     return { message: 'Senha atualizada com sucesso.' };
   } catch (error) {
     throw error;
