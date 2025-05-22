@@ -31,7 +31,7 @@ const findById = (id) => {
   });
 };
 
-const create = async ({ project_id, name, description, status, allocated_budget, start_date, end_date, created_by }) => {
+const create = async ({ project_id, name, description, status, allocated_budget, start_date, end_date, created_by_id }) => {
   try {
 
     // Validações básicas obrigatórias
@@ -46,10 +46,10 @@ const create = async ({ project_id, name, description, status, allocated_budget,
     }
 
     // Verifica se o usuário criador existe (se informado)
-    if (created_by !== undefined) {
-      const [userExists] = await queryAsync("SELECT id FROM user WHERE id = ?", [created_by]);
+    if (created_by_id !== undefined) {
+      const [userExists] = await queryAsync("SELECT id FROM user WHERE id = ?", [created_by_id]);
       if (userExists.length === 0) {
-        throw new Error(`Usuário não encontrado, id: ${created_by}`);
+        throw new Error(`Usuário não encontrado, id: ${created_by_id}`);
       }
     }
 
@@ -141,9 +141,9 @@ const create = async ({ project_id, name, description, status, allocated_budget,
       placeholders.push("?");
     }
 
-    if (created_by !== undefined) {
-      fields.push("created_by");
-      values.push(created_by);
+    if (created_by_id !== undefined) {
+      fields.push("created_by_id");
+      values.push(created_by_id);
       placeholders.push("?");
     }
 
@@ -156,7 +156,7 @@ const create = async ({ project_id, name, description, status, allocated_budget,
   }
 };
 
-const update = async (id, { project_id, name, description, status, allocated_budget, start_date, end_date, created_by }) => {
+const update = async (id, { project_id, name, description, status, allocated_budget, start_date, end_date, created_by_id }) => {
   try {
     // Verifica se a atividade existe
     const [activityExists] = await queryAsync("SELECT id, project_id, start_date, end_date FROM activity WHERE id = ?", [id]);
@@ -173,11 +173,11 @@ const update = async (id, { project_id, name, description, status, allocated_bud
       throw new Error(`Projeto não encontrado, id: ${effectiveProjectId}`);
     }
 
-    // Se o created_by foi informado, verifica se o usuário existe
-    if (created_by !== undefined) {
-      const [userExists] = await queryAsync("SELECT id FROM user WHERE id = ?", [created_by]);
+    // Se o created_by_id foi informado, verifica se o usuário existe
+    if (created_by_id !== undefined) {
+      const [userExists] = await queryAsync("SELECT id FROM user WHERE id = ?", [created_by_id]);
       if (userExists.length === 0) {
-        throw new Error(`Usuário não encontrado, id: ${created_by}`);
+        throw new Error(`Usuário não encontrado, id: ${created_by_id}`);
       }
     }
 
@@ -280,9 +280,9 @@ const update = async (id, { project_id, name, description, status, allocated_bud
       fields.push("end_date = ?");
       values.push(end_date);
     }
-    if (created_by !== undefined) {
-      fields.push("created_by = ?");
-      values.push(created_by);
+    if (created_by_id !== undefined) {
+      fields.push("created_by_id = ?");
+      values.push(created_by_id);
     }
 
     if (fields.length === 0) {
