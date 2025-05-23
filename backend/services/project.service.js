@@ -818,43 +818,30 @@ const findActivitiesByProjectId = (projectId) => {
 const findUsersByProjectId = async (projectId) => {
   try {
     // Verifica se o projeto existe
-    // Recupera os IDs de criador e responsável
-    const [project] = await queryAsync("SELECT created_by_id, responsible_user_id FROM project WHERE id = ?", [projectId]);
+    const [project] = await queryAsync("SELECT id FROM project WHERE id = ?", [projectId]);
     if (project.length === 0) {
       throw new Error("Projeto não encontrado.");
     }
 
-    const userIds = new Set();
-
-    // Adiciona o criador
-    if (project[0].created_by_id) {
-      userIds.add(project[0].created_by_id);
-    }
-
-    // Adiciona o responsável (se diferente do criador)
-    if (project[0].responsible_user_id && project[0].responsible_user_id !== project[0].created_by_id) {
-      userIds.add(project[0].responsible_user_id);
-    }
-
-    // Busca usuários vinculados aos times do projeto
-    const [teamUsers] = await queryAsync(`
-      SELECT DISTINCT u.*
+    const [users] = await queryAsync(`
+      SELECT DISTINCT u.id, u.name, u.email, u.is_active, u.system_role_id
       FROM user u
       INNER JOIN user_team ut ON ut.user_id = u.id
       INNER JOIN project_team pt ON pt.team_id = ut.team_id
       WHERE pt.project_id = ?
-    `, [projectId]);
 
-    teamUsers.forEach(u => userIds.add(u.id));
-    
-    // Consulta todos os usuários únicos de uma vez
-    if (userIds.size === 0) return [];
-    
-    const placeholders = Array.from(userIds).map(() => '?').join(', ');
-    const [users] = await queryAsync(
-      `SELECT u.id, u.name, u.email, u.is_active, u.system_role_id FROM user u WHERE id IN (${placeholders})`
-      , [...userIds]
-    );
+      UNION
+
+      SELECT u.id, u.name, u.email, u.is_active, u.system_role_id
+      FROM user u
+      WHERE u.id = (SELECT created_by_id FROM project WHERE id = ?)
+
+      UNION
+
+      SELECT u.id, u.name, u.email, u.is_active, u.system_role_id
+      FROM user u
+      WHERE u.id = (SELECT responsible_user_id FROM project WHERE id = ?);
+    `, [projectId, projectId, projectId]);
 
     return users;
   } catch (error) {
