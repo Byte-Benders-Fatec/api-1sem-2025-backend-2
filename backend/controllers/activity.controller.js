@@ -37,14 +37,14 @@ const getById = async (req, res) => {
 
 const create = async (req, res) => {
   try {
-    const { project_id, name, description, status, allocated_budget, start_date, end_date, created_by_id } = req.body;
+    const { project_id, name, description, status, allocated_budget, start_date, end_date, created_by_id, responsible_user_id } = req.body;
 
     if (!project_id) return res.status(400).json({ error: "O id do projeto é obrigatório" });
     if (!name) return res.status(400).json({ error: "O nome é obrigatório" });
     if (!start_date) return res.status(400).json({ error: "A data de início é obrigatória" });
     if (!end_date) return res.status(400).json({ error: "A data de término é obrigatória" });
 
-    const result = await activityService.create({ project_id, name, description, status, allocated_budget, start_date, end_date, created_by_id });
+    const result = await activityService.create({ project_id, name, description, status, allocated_budget, start_date, end_date, created_by_id, responsible_user_id });
     res.status(201).json(result);
   } catch (err) {
     res.status(500).json({ error: "Erro ao criar atividade", details: err.message });
@@ -53,10 +53,10 @@ const create = async (req, res) => {
 
 const update = async (req, res) => {
   const id = req.params.id;
-  const { project_id, name, description, status, allocated_budget, start_date, end_date, created_by_id } = req.body;
+  const { project_id, name, description, status, allocated_budget, start_date, end_date, created_by_id, responsible_user_id } = req.body;
 
   try {
-    const result = await activityService.update(id, { project_id, name, description, status, allocated_budget, start_date, end_date, created_by_id });
+    const result = await activityService.update(id, { project_id, name, description, status, allocated_budget, start_date, end_date, created_by_id, responsible_user_id });
     res.status(200).json({ message: "Atividade atualizada com sucesso", result });
   } catch (err) {
     res.status(400).json({ error: "Erro ao atualizar atividade", details: err.message });
