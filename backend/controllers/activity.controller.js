@@ -160,6 +160,53 @@ const uploadAndLinkDocumentToActivity = async (req, res) => {
   }
 };
 
+const getUsersByActivityId = async (req, res) => {
+  try {
+    const activityId = req.params.id;
+    const users = await activityService.findUsersByActivityId(activityId);
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar usuários da atividade", details: err.message });
+  }
+};
+
+const linkUserToActivity = async (req, res) => {
+  try {
+    const { id: activityId } = req.params;
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ error: "O campo 'user_id' é obrigatório." });
+    }
+
+    const result = await activityService.addUserToActivity(activityId, user_id);
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao vincular usuário à atividade", details: err.message });
+  }
+};
+
+const unlinkUserFromActivity = async (req, res) => {
+  try {
+    const { activityId, userId } = req.params;
+
+    const result = await activityService.removeUserFromActivity(activityId, userId);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao remover vínculo entre atividade e usuário", details: err.message });
+  }
+};
+
+const getAvailableUsersForActivity = async (req, res) => {
+  try {
+    const { id: activityId } = req.params;
+    const users = await activityService.findAvailableUsersForActivity(activityId);
+    res.json(users);
+  } catch (err) {
+    res.status(400).json({ error: "Erro ao buscar usuários disponíveis", details: err.message });
+  }
+};
+
 module.exports = {
   getAll,
   getByFilter,
@@ -173,4 +220,8 @@ module.exports = {
   linkDocumentToActivity,
   unlinkDocumentFromActivity,
   uploadAndLinkDocumentToActivity,
+  getUsersByActivityId,
+  linkUserToActivity,
+  unlinkUserFromActivity,
+  getAvailableUsersForActivity,
 };

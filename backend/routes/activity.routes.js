@@ -7,6 +7,12 @@ const { upload, handleMulterError } = require("../middlewares/upload.middleware"
 router.get("/:id/tasks", activityController.getTasksByActivityId);
 router.post("/:id/tasks", activityController.createTaskForActivity);
 
+// Usuários vinculados a atividade (N:N)
+router.get("/:id/users", activityController.getUsersByActivityId);
+router.get("/:id/available-users", activityController.getAvailableUsersForActivity);
+router.post("/:id/users", activityController.linkUserToActivity);
+router.delete("/:activityId/users/:userId", activityController.unlinkUserFromActivity);
+
 // Documentos vinculados à atividade (N:N)
 router.get("/:id/documents", activityController.getDocumentsByActivityId);
 router.post("/:id/documents/upload", upload.single("file"), activityController.uploadAndLinkDocumentToActivity);

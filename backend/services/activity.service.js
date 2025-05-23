@@ -1,6 +1,7 @@
 const { db, queryAsync } = require("../configs/db");
 const { v4: uuidv4 } = require("uuid");
 const { formatDate, getDateOnly } = require("../utils/formatDate");
+const { findUsersByProjectId } = require("./project.service");
 
 const allowedStatus = ['Não iniciada', 'Em andamento', 'Concluída', 'Cancelada'];
 
@@ -438,6 +439,142 @@ const removeDocumentFromActivity = async (activityId, documentId) => {
   }
 };
 
+const findUsersByActivityId = async (activityId) => {
+  try {
+    // Verifica se a atividade existe
+    const [activity] = await queryAsync("SELECT id FROM activity WHERE id = ?", [activityId]);
+    if (activity.length === 0) {
+      throw new Error("Atividade não encontrada.");
+    }
+  
+    // Busca os usuários vinculados à atividade
+    const [users] = await queryAsync(`
+      SELECT DISTINCT u.id, u.name, u.email, u.is_active, u.system_role_id
+      FROM user u
+      INNER JOIN activity_user au ON au.user_id = u.id
+      WHERE au.activity_id = ?
+
+      UNION
+
+      SELECT u.id, u.name, u.email, u.is_active, u.system_role_id
+      FROM user u
+      WHERE u.id = (SELECT created_by_id FROM activity WHERE id = ?)
+
+      UNION
+
+      SELECT u.id, u.name, u.email, u.is_active, u.system_role_id
+      FROM user u
+      WHERE u.id = (SELECT responsible_user_id FROM activity WHERE id = ?);
+    `, [activityId, activityId, activityId]);
+
+    return users;
+  } catch (error) {
+    throw error;
+  }
+};
+
+const addUserToActivity = async (activityId, userId) => {
+  try {
+    // Verifica se a atividade existe
+    const [activity] = await queryAsync("SELECT id FROM activity WHERE id = ?", [activityId]);
+    if (activity.length === 0) {
+      throw new Error("Atividade não encontrada.");
+    }
+
+    // Verifica se o usuário existe
+    const [user] = await queryAsync("SELECT id FROM user WHERE id = ?", [userId]);
+    if (user.length === 0) {
+      throw new Error("Usuário não encontrado.");
+    }
+
+    // Verifica se o vínculo já existe
+    const [exists] = await queryAsync(
+      "SELECT * FROM activity_user WHERE activity_id = ? AND user_id = ?",
+      [activityId, userId]
+    );
+    if (exists.length > 0) {
+      throw new Error("Este usuário já está vinculado à atividade.");
+    }
+
+    // Insere vínculo
+    await queryAsync(
+      "INSERT INTO activity_user (activity_id, user_id) VALUES (?, ?)",
+      [activityId, userId]
+    );
+
+    return { message: "Usuário vinculado com sucesso à atividade." };
+  } catch (error) {
+    throw error;
+  }
+};
+
+const removeUserFromActivity = async (activityId, userId) => {
+  try {
+    // Verifica se o vínculo existe
+    const [existing] = await queryAsync(
+      "SELECT * FROM activity_user WHERE activity_id = ? AND user_id = ?",
+      [activityId, userId]
+    );
+
+    if (existing.length === 0) {
+      throw new Error("Vínculo entre atividade e usuário não encontrado.");
+    }
+
+    // Remove o vínculo
+    await queryAsync(
+      "DELETE FROM activity_user WHERE activity_id = ? AND user_id = ?",
+      [activityId, userId]
+    );
+
+    return { message: "Vínculo removido com sucesso." };
+  } catch (error) {
+    throw error;
+  }
+};
+
+const findAvailableUsersForActivity = async (activityId) => {
+  try {
+    // Verifica se a atividade existe e obtém o project_id
+    const [activity] = await queryAsync("SELECT id, project_id FROM activity WHERE id = ?", [activityId]);
+    if (activity.length === 0) {
+      throw new Error("Atividade não encontrada.");
+    }
+    const projectId = activity[0].project_id;
+
+    // Obtém todos os usuários vinculados ao projeto
+    const projectUsers = await findUsersByProjectId(projectId);
+    if (projectUsers.length === 0) {
+      return [];  // Nenhum usuário disponível, já que ninguém participa do projeto
+    }
+
+    const projectUserIds = projectUsers.map(u => u.id);
+
+    // Obtém os usuários já vinculados à atividade
+    const [activityUsers] = await queryAsync(
+      "SELECT user_id FROM activity_user WHERE activity_id = ?",
+      [activityId]
+    );
+    const activityUserIds = activityUsers.map(u => u.user_id);
+
+    // Filtra: usuários do projeto que não estão na atividade
+    const availableUserIds = projectUserIds.filter(id => !activityUserIds.includes(id));
+    if (availableUserIds.length === 0) {
+      return []; // Ninguém disponível
+    }
+
+    // Consulta os dados completos dos usuários disponíveis
+    const placeholders = availableUserIds.map(() => '?').join(', ');
+    const [availableUsers] = await queryAsync(
+      `SELECT id, name, email, is_active, system_role_id FROM user WHERE id IN (${placeholders}) AND is_active = 1`,
+      availableUserIds
+    );
+
+    return availableUsers;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   findAll,
   findByFilters,
@@ -449,4 +586,8 @@ module.exports = {
   findDocumentsByActivityId,
   addDocumentToActivity,
   removeDocumentFromActivity,
+  findUsersByActivityId,
+  addUserToActivity,
+  removeUserFromActivity,
+  findAvailableUsersForActivity,
 };
