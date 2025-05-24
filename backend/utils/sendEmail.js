@@ -18,12 +18,18 @@ const transporter = nodemailer.createTransport({
  * @param {string} options.text - corpo do e-mail (texto puro)
  */
 async function sendEmail({ to, subject, text }) {
-  await transporter.sendMail({
-    from: `"Gerenciador de Projetos FAPG" <${process.env.EMAIL_USER}>`,
-    to,
-    subject,
-    text
-  });
+  
+  if (process.env.SEND_EMAIL === 'true') {
+    await transporter.sendMail({
+      from: `"Gerenciador de Projetos FAPG" <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      text
+    });
+  } else {
+    console.log(`\nSimulação de envio de e-mail para ${to}:\nAssunto: ${subject}\nTexto: ${text}`);
+  }
+  
 }
 
 module.exports = { sendEmail };
