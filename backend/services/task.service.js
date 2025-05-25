@@ -162,7 +162,7 @@ const create = async ({ activity_id, user_id, title, description, time_spent_min
   }
 };
 
-const update = async (id, { activity_id, user_id, title, description, time_spent_minutes, cost }) => {
+const update = async (id, { activity_id, user_id, title, description, time_spent_minutes, cost, date }) => {
   try {
     // Verifica se a tarefa existe
     const [taskExists] = await queryAsync("SELECT id, activity_id, cost FROM task WHERE id = ?", [id]);
@@ -174,10 +174,36 @@ const update = async (id, { activity_id, user_id, title, description, time_spent
     const currentCost = parseFloat(taskExists[0].cost) || 0;
     const effectiveActivityId = activity_id !== undefined ? activity_id : currentActivityId;
 
-    // Verifica se a atividade existe
-    const [activityExists] = await queryAsync("SELECT id, allocated_budget FROM activity WHERE id = ?", [effectiveActivityId]);
+    // Verifica se a atividade existe e recupera o orçamento e projeto associado
+    const [activityExists] = await queryAsync("SELECT id, allocated_budget, project_id FROM activity WHERE id = ?", [effectiveActivityId]);
     if (activityExists.length === 0) {
       throw new Error(`Atividade não encontrada, id: ${effectiveActivityId}`);
+    }
+
+    const projectId = activityExists[0].project_id;
+
+    // Recupera as datas do projeto
+    const [projectExists] = await queryAsync("SELECT id, start_date, end_date FROM project WHERE id = ?", [projectId]);
+    if (projectExists.length === 0) {
+      throw new Error(`Projeto não encontrado, id: ${projectId}`);
+    }
+
+    // Validação de data
+    if (date !== undefined) {
+      const taskDate = new Date(date);
+      if (isNaN(taskDate.getTime())) {
+        throw new Error("Data inválida fornecida.");
+      }
+
+      const compTaskDate = getDateOnly(taskDate);
+      const compProjectStart = getDateOnly(new Date(projectExists[0].start_date));
+      const compProjectEnd = getDateOnly(new Date(projectExists[0].end_date));
+
+      if (compTaskDate < compProjectStart || compTaskDate > compProjectEnd) {
+        throw new Error(
+          `A data da tarefa deve estar dentro do período do projeto: de ${formatDate(compProjectStart)} até ${formatDate(compProjectEnd)}.`
+        );
+      }
     }
 
     // Se o user_id foi informado, verifica se o usuário existe
@@ -193,7 +219,6 @@ const update = async (id, { activity_id, user_id, title, description, time_spent
       if (isNaN(time_spent_minutes)) {
         throw new Error("O valor de tempo gasto em minutos deve ser um número válido.");
       }
-
       const minutes = parseInt(time_spent_minutes);
       if (minutes < 0) {
         throw new Error("O valor de tempo gasto em minutos não pode ser negativo.");
@@ -212,12 +237,10 @@ const update = async (id, { activity_id, user_id, title, description, time_spent
       }
 
       // Valida custo total das tarefas na atividade
-      const [costResult] = await queryAsync(`
-        SELECT SUM(cost) AS total_cost
-        FROM task
-        WHERE activity_id = ?
-          AND id != ?
-      `, [effectiveActivityId, id]);
+      const [costResult] = await queryAsync(
+        `SELECT SUM(cost) AS total_cost FROM task WHERE activity_id = ? AND id != ?`,
+        [effectiveActivityId, id]
+      );
 
       const totalOtherTasks = parseFloat(costResult[0].total_cost || 0);
       const newTotal = parseFloat((totalOtherTasks + price).toFixed(2));
@@ -260,6 +283,12 @@ const update = async (id, { activity_id, user_id, title, description, time_spent
     if (cost !== undefined) {
       fields.push("cost = ?");
       values.push(cost);
+    }
+
+    if (date !== undefined) {
+      const compDate = getDateOnly(new Date(date));
+      fields.push("date = ?");
+      values.push(compDate);
     }
 
     if (fields.length === 0) {

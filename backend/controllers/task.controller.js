@@ -50,10 +50,10 @@ const create = async (req, res) => {
 
 const update = async (req, res) => {
   const id = req.params.id;
-  const { activity_id, user_id, title, description, time_spent_minutes, cost } = req.body;
+  const { activity_id, user_id, title, description, time_spent_minutes, cost, date } = req.body;
 
   try {
-    const result = await taskService.update(id, { activity_id, user_id, title, description, time_spent_minutes, cost });
+    const result = await taskService.update(id, { activity_id, user_id, title, description, time_spent_minutes, cost, date });
     res.status(200).json({ message: "Tarefa atualizada com sucesso", result });
   } catch (err) {
     res.status(400).json({ error: "Erro ao atualizar tarefa", details: err.message });
