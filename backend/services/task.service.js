@@ -1,5 +1,6 @@
 const { db, queryAsync } = require("../configs/db");
 const { v4: uuidv4 } = require("uuid");
+const { formatDate, getDateOnly } = require("../utils/formatDate");
 
 // const allowedStatus = ['Não iniciada', 'Em andamento', 'Concluída', 'Cancelada'];
 
@@ -30,18 +31,51 @@ const findById = (id) => {
   });
 };
 
-const create = async ({ activity_id, user_id, title, description, time_spent_minutes, cost }) => {
+const create = async ({ activity_id, user_id, title, description, time_spent_minutes, cost, date }) => {
   try {
-
     // Validações básicas obrigatórias
     if (!activity_id || !title) {
       throw new Error("É necessário fornecer id da atividade e título.");
     }
 
-    // Verifica se a atividade existe e recupera o orçamento
-    const [activityExists] = await queryAsync("SELECT id, allocated_budget FROM activity WHERE id = ?", [activity_id]);
+    const taskDate = date ? new Date(date) : new Date();
+
+    if (isNaN(taskDate.getTime())) {
+      throw new Error("Data inválida fornecida.");
+    }
+
+    // Verifica se a atividade existe e recupera o orçamento e projeto associado
+    const [activityExists] = await queryAsync(
+      "SELECT id, allocated_budget, project_id FROM activity WHERE id = ?",
+      [activity_id]
+    );
     if (activityExists.length === 0) {
       throw new Error(`Atividade não encontrada, id: ${activity_id}`);
+    }
+
+    const projectId = activityExists[0].project_id;
+
+    // Recupera as datas do projeto
+    const [projectExists] = await queryAsync(
+      "SELECT id, start_date, end_date FROM project WHERE id = ?",
+      [projectId]
+    );
+    if (projectExists.length === 0) {
+      throw new Error(`Projeto não encontrado, id: ${projectId}`);
+    }
+
+    // Obtém as datas do projeto
+    const projectStart = new Date(projectExists[0].start_date);
+    const projectEnd = new Date(projectExists[0].end_date);
+
+    const compTaskDate = getDateOnly(taskDate);
+    const compProjectStart = getDateOnly(projectStart);
+    const compProjectEnd = getDateOnly(projectEnd);
+
+    if (compTaskDate < compProjectStart || compTaskDate > compProjectEnd) {
+      throw new Error(
+        `A data da tarefa deve estar dentro do período do projeto: de ${formatDate(projectStart)} até ${formatDate(projectEnd)}.`
+      );
     }
 
     // Verifica se o usuário criador existe (se informado)
@@ -57,7 +91,6 @@ const create = async ({ activity_id, user_id, title, description, time_spent_min
       if (isNaN(time_spent_minutes)) {
         throw new Error("O valor de tempo gasto em minutos deve ser um número válido.");
       }
-
       const minutes = parseInt(time_spent_minutes);
       if (minutes < 0) {
         throw new Error("O valor de tempo gasto em minutos não pode ser negativo.");
@@ -76,11 +109,10 @@ const create = async ({ activity_id, user_id, title, description, time_spent_min
       }
 
       // Valida custo total das tarefas na atividade
-      const [costResult] = await queryAsync(`
-        SELECT SUM(cost) AS total_cost
-        FROM task
-        WHERE activity_id = ?
-      `, [activity_id]);
+      const [costResult] = await queryAsync(
+        `SELECT SUM(cost) AS total_cost FROM task WHERE activity_id = ?`,
+        [activity_id]
+      );
 
       const totalCost = parseFloat(costResult[0].total_cost || 0);
       const newTotal = parseFloat((totalCost + price).toFixed(2));
@@ -93,10 +125,10 @@ const create = async ({ activity_id, user_id, title, description, time_spent_min
 
     // Monta dinamicamente os campos a serem inseridos
     const id = uuidv4();
-    const fields = ["id", "activity_id", "title"];
-    const values = [id, activity_id, title];
-    const placeholders = ["?", "?", "?"];
-    
+    const fields = ["id", "activity_id", "title", "date"];
+    const values = [id, activity_id, title, compTaskDate];
+    const placeholders = ["?", "?", "?", "?"];
+
     if (user_id !== undefined) {
       fields.push("user_id");
       values.push(user_id);

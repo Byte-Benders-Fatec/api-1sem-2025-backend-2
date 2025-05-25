@@ -36,12 +36,12 @@ const getById = async (req, res) => {
 
 const create = async (req, res) => {
   try {
-    const { activity_id, user_id, title, description, time_spent_minutes, cost } = req.body;
+    const { activity_id, user_id, title, description, time_spent_minutes, cost, date } = req.body;
 
     if (!activity_id) return res.status(400).json({ error: "O id da atividade é obrigatório" });
     if (!title) return res.status(400).json({ error: "O título é obrigatório" });
 
-    const result = await taskService.create({ activity_id, user_id, title, description, time_spent_minutes, cost });
+    const result = await taskService.create({ activity_id, user_id, title, description, time_spent_minutes, cost, date });
     res.status(201).json(result);
   } catch (err) {
     res.status(500).json({ error: "Erro ao criar tarefa", details: err.message });
