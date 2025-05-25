@@ -68,10 +68,16 @@ const create = async ({ activity_id, user_id, title, description, time_spent_min
     const projectStart = new Date(projectExists[0].start_date);
     const projectEnd = new Date(projectExists[0].end_date);
 
+    const today = getDateOnly(new Date());
     const compTaskDate = getDateOnly(taskDate);
     const compProjectStart = getDateOnly(projectStart);
     const compProjectEnd = getDateOnly(projectEnd);
 
+    // Verifica se a data é no futuro
+    if (compTaskDate > today) {
+      throw new Error(`A data da tarefa não pode ser futura. Data informada: ${formatDate(compTaskDate)}.`);
+    }
+    // Verifica se a data está dentro do período do projeto
     if (compTaskDate < compProjectStart || compTaskDate > compProjectEnd) {
       throw new Error(
         `A data da tarefa deve estar dentro do período do projeto: de ${formatDate(projectStart)} até ${formatDate(projectEnd)}.`
@@ -195,10 +201,16 @@ const update = async (id, { activity_id, user_id, title, description, time_spent
         throw new Error("Data inválida fornecida.");
       }
 
+      const today = getDateOnly(new Date());
       const compTaskDate = getDateOnly(taskDate);
       const compProjectStart = getDateOnly(new Date(projectExists[0].start_date));
       const compProjectEnd = getDateOnly(new Date(projectExists[0].end_date));
 
+      // Verifica se a data é no futuro
+      if (compTaskDate > today) {
+        throw new Error(`A data da tarefa não pode ser futura. Data informada: ${formatDate(compTaskDate)}.`);
+      }
+      // Verifica se a data está dentro do período do projeto
       if (compTaskDate < compProjectStart || compTaskDate > compProjectEnd) {
         throw new Error(
           `A data da tarefa deve estar dentro do período do projeto: de ${formatDate(compProjectStart)} até ${formatDate(compProjectEnd)}.`
